@@ -1423,7 +1423,7 @@ if (process.env.NODE_ENV === 'production') {
 
 // Start server
 const PORT = process.env.PORT || 3002
-const HOST = process.env.NODE_ENV === 'production' ? '0.0.0.0' : 'localhost'
+const HOST = process.env.NODE_ENV === 'production' ? '::' : 'localhost'
 
 console.log(`🔧 Starting server with PORT: ${PORT}, HOST: ${HOST}`)
 
