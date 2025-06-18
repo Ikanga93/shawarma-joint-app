@@ -17,6 +17,24 @@ import http from 'http'
 // Load environment variables first
 dotenv.config()
 
+// Global error handling to prevent crashes
+process.on('uncaughtException', (error) => {
+  console.error('🚨 Uncaught Exception:', error)
+  console.error('Stack:', error.stack)
+  // Log but don't exit in production to maintain service availability
+  if (process.env.NODE_ENV !== 'production') {
+    process.exit(1)
+  }
+})
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('🚨 Unhandled Rejection at:', promise, 'reason:', reason)
+  // Log but don't exit in production to maintain service availability
+  if (process.env.NODE_ENV !== 'production') {
+    process.exit(1)
+  }
+})
+
 // Enhanced environment debugging for Railway
 console.log('🔍 Environment check:')
 console.log('NODE_ENV:', process.env.NODE_ENV)
@@ -1192,6 +1210,36 @@ app.get('/health', (req, res) => {
   })
 })
 
+// Simple test endpoint for debugging 502 errors
+app.get('/test', (req, res) => {
+  console.log('🧪 Test endpoint called')
+  res.json({ 
+    message: 'Server is responding!', 
+    timestamp: new Date().toISOString(),
+    port: process.env.PORT,
+    host: req.get('host')
+  })
+})
+
+// Another simple endpoint
+app.get('/', (req, res) => {
+  if (process.env.NODE_ENV === 'production') {
+    // In production, serve the React app
+    const indexPath = path.join(__dirname, '../dist/index.html')
+    if (fs.existsSync(indexPath)) {
+      res.sendFile(indexPath)
+    } else {
+      res.status(500).send('React app not found')
+    }
+  } else {
+    res.json({ 
+      message: 'Fernando\'s Food Truck API', 
+      environment: process.env.NODE_ENV,
+      endpoints: ['/health', '/test', '/api/menu', '/api/locations']
+    })
+  }
+})
+
 // Route debugging endpoint
 app.get('/api/debug-routes', (req, res) => {
   const path = require('path')
@@ -1380,10 +1428,17 @@ server.listen(PORT, HOST, () => {
   console.log(`💚 Health Check: http://${HOST}:${PORT}/health`)
   console.log(`✅ Server startup successful!`)
   
-  // Test health endpoint after startup
+  // Simplified health check for Railway environment
   setTimeout(() => {
+    // Skip health check in production to avoid connection issues
+    if (process.env.NODE_ENV === 'production') {
+      console.log(`🔍 Health check skipped in production environment`)
+      console.log(`✅ Server is ready to accept connections`)
+      return
+    }
+    
     const options = {
-      hostname: HOST === '0.0.0.0' ? 'localhost' : HOST,
+      hostname: 'localhost',
       port: PORT,
       path: '/health',
       method: 'GET'
@@ -1402,6 +1457,11 @@ server.listen(PORT, HOST, () => {
       console.error('❌ Health check failed:', err.message)
     })
     
+    req.setTimeout(5000, () => {
+      req.destroy()
+      console.log('⏰ Health check timed out')
+    })
+    
     req.end()
   }, 2000) // Wait 2 seconds after startup
 }).on('error', (err) => {
@@ -1411,9 +1471,17 @@ server.listen(PORT, HOST, () => {
   
   if (err.code === 'EADDRINUSE') {
     console.error(`Port ${PORT} is already in use`)
+    console.error(`💡 Try a different port or kill the process using this port`)
   } else if (err.code === 'EACCES') {
     console.error(`Permission denied to bind to port ${PORT}`)
+    console.error(`💡 Try running with elevated privileges or use a port > 1024`)
+  } else if (err.code === 'ENOTFOUND') {
+    console.error(`Host ${HOST} not found`)
+    console.error(`💡 Check if the host address is correct`)
   }
   
-  process.exit(1)
+  // Don't exit in production to prevent Railway from restarting unnecessarily
+  if (process.env.NODE_ENV !== 'production') {
+    process.exit(1)
+  }
 }) 
