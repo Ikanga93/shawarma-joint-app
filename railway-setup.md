@@ -10,7 +10,7 @@ Add these variables:
 NODE_ENV=production
 DATABASE_URL=postgresql://postgres:zTIPSGERsHPOKMUwXqUTrXpBjRzsUtxc@postgres.railway.internal:5432/railway
 JWT_SECRET=fernando-food-truck-super-secret-key-2024
-PORT=3001
+PORT=3002
 ```
 
 ## Alternative Public URL (if internal doesn't work):
