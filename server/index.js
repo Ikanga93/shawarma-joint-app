@@ -12,6 +12,7 @@ import jwt from 'jsonwebtoken'
 import multer from 'multer'
 import fs from 'fs'
 import { query, queryOne, queryAll, initializeDatabase } from './database.js'
+import http from 'http'
 
 // Load environment variables first
 dotenv.config()
@@ -1381,7 +1382,6 @@ server.listen(PORT, HOST, () => {
   
   // Test health endpoint after startup
   setTimeout(() => {
-    const http = require('http')
     const options = {
       hostname: HOST === '0.0.0.0' ? 'localhost' : HOST,
       port: PORT,
