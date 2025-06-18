@@ -315,9 +315,19 @@ app.post('/api/orders', async (req, res) => {
     // Ensure frontendUrl doesn't end with a slash to prevent double slashes
     frontendUrl = frontendUrl.replace(/\/+$/, '')
     
+    // Additional URL validation and cleanup
+    if (frontendUrl && !frontendUrl.startsWith('http')) {
+      frontendUrl = `https://${frontendUrl}`
+    }
+    
+    // Construct URLs with proper encoding
+    const successUrl = `${frontendUrl}/order-success?session_id={CHECKOUT_SESSION_ID}&order_id=${encodeURIComponent(orderId)}`
+    const cancelUrl = `${frontendUrl}/`
+    
     // Log the frontend URL for debugging
-    console.log(` Frontend URL for Stripe: ${frontendUrl}`)
-    console.log(` Success URL will be: ${frontendUrl}/order-success?session_id={CHECKOUT_SESSION_ID}&order_id=${orderId}`)
+    console.log(`🔗 Frontend URL for Stripe: ${frontendUrl}`)
+    console.log(`✅ Success URL will be: ${successUrl}`)
+    console.log(`❌ Cancel URL will be: ${cancelUrl}`)
 
     // Create Stripe checkout session
     const session = await stripe.checkout.sessions.create({
@@ -336,8 +346,8 @@ app.post('/api/orders', async (req, res) => {
         },
       ],
       mode: 'payment',
-      success_url: `${frontendUrl}/order-success?session_id={CHECKOUT_SESSION_ID}&order_id=${orderId}`,
-      cancel_url: `${frontendUrl}/`,
+      success_url: successUrl,
+      cancel_url: cancelUrl,
       metadata: {
         orderId: orderId,
         customerName: customerName,
