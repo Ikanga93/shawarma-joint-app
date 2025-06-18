@@ -1,0 +1,226 @@
+.hero {
+  position: relative;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  padding-top: 0;
+}
+
+.hero-background {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, var(--cream) 0%, #F0FFF0 50%, var(--warm-yellow) 100%);
+}
+
+.hero-pattern {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: 
+    radial-gradient(circle at 20% 80%, rgba(50, 205, 50, 0.1) 0%, transparent 50%),
+    radial-gradient(circle at 80% 20%, rgba(154, 205, 50, 0.1) 0%, transparent 50%),
+    radial-gradient(circle at 40% 40%, rgba(255, 215, 0, 0.1) 0%, transparent 50%);
+}
+
+.hero-content {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 60px;
+  align-items: center;
+}
+
+.hero-title {
+  font-size: 3.5rem;
+  font-weight: 700;
+  line-height: 1.2;
+  margin-bottom: 20px;
+  color: var(--dark-brown);
+}
+
+.hero-title span {
+  color: var(--primary-red);
+  position: relative;
+}
+
+.hero-title span::after {
+  content: '';
+  position: absolute;
+  bottom: -5px;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, var(--primary-red), var(--warm-yellow));
+  border-radius: 2px;
+}
+
+.hero-subtitle {
+  font-size: 1.3rem;
+  color: var(--text-light);
+  margin-bottom: 40px;
+  line-height: 1.6;
+}
+
+.hero-info {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  margin-bottom: 40px;
+}
+
+.info-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-weight: 500;
+  color: var(--text-dark);
+}
+
+.info-icon {
+  color: var(--primary-red);
+  width: 20px;
+  height: 20px;
+}
+
+.hero-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  align-items: flex-start;
+}
+
+.btn-large {
+  padding: 20px 40px !important;
+  font-size: 1.3rem !important;
+  font-weight: 700 !important;
+  border-radius: 30px !important;
+  background: linear-gradient(45deg, #FF6B35, #F7931E) !important;
+  box-shadow: 0 8px 25px rgba(255, 107, 53, 0.4) !important;
+  transform: scale(1.05);
+  transition: all 0.3s ease !important;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-large::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+  transition: left 0.5s ease;
+}
+
+.btn-large:hover::before {
+  left: 100%;
+}
+
+.btn-large:hover {
+  transform: scale(1.08) translateY(-3px) !important;
+  box-shadow: 0 12px 35px rgba(255, 107, 53, 0.5) !important;
+  background: linear-gradient(45deg, #FF5722, #FF8F00) !important;
+}
+
+.hero-image {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 30px;
+}
+
+.hero-logo {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.hero-logo-image {
+  width: 150px;
+  height: 150px;
+  object-fit: contain;
+  animation: logoFloat 4s ease-in-out infinite;
+  filter: drop-shadow(0 10px 20px rgba(0, 0, 0, 0.15));
+}
+
+.food-truck-illustration {
+  font-size: 12rem;
+  text-align: center;
+  animation: float 3s ease-in-out infinite;
+  filter: drop-shadow(0 10px 20px rgba(0, 0, 0, 0.1));
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-20px);
+  }
+}
+
+@keyframes logoFloat {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-15px) rotate(2deg);
+  }
+}
+
+@media (max-width: 768px) {
+  .hero {
+    padding-top: 0;
+    min-height: calc(100vh - 60px);
+  }
+
+  .hero-content {
+    grid-template-columns: 1fr;
+    gap: 40px;
+    text-align: center;
+  }
+
+  .hero-title {
+    font-size: 2.5rem;
+  }
+
+  .hero-subtitle {
+    font-size: 1.1rem;
+  }
+
+  .hero-info {
+    align-items: center;
+  }
+
+  .hero-logo-image {
+    width: 120px;
+    height: 120px;
+  }
+
+  .food-truck-illustration {
+    font-size: 8rem;
+  }
+
+  .hero-buttons {
+    align-items: center;
+    width: 100%;
+  }
+
+  .btn-large {
+    padding: 18px 35px !important;
+    font-size: 1.2rem !important;
+    width: 100%;
+    max-width: 300px;
+  }
+} 

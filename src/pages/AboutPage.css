@@ -1,0 +1,262 @@
+.about-page {
+  min-height: 100vh;
+}
+
+.about-hero {
+  position: relative;
+  min-height: 60vh;
+  background: linear-gradient(135deg, #32CD32 0%, #FFD700 100%);
+  display: flex;
+  align-items: center;
+  color: white;
+  text-align: center;
+  overflow: hidden;
+}
+
+.page-title {
+  font-size: 3.5rem;
+  font-weight: bold;
+  margin-bottom: 1rem;
+  text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+}
+
+.page-subtitle {
+  font-size: 1.3rem;
+  opacity: 0.9;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.about-story {
+  padding: 80px 0;
+  background: #f8f9fa;
+}
+
+.story-content {
+  background: white;
+  padding: 3rem 2rem;
+  border-radius: 20px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+  border-left: 4px solid #32CD32;
+}
+
+.story-content h3 {
+  font-size: 1.8rem;
+  font-weight: 600;
+  color: #32CD32;
+  margin-bottom: 1.5rem;
+}
+
+.story-paragraph {
+  font-size: 1.1rem;
+  line-height: 1.8;
+  margin-bottom: 1.5rem;
+  color: #555;
+}
+
+.story-image {
+  text-align: center;
+}
+
+.chef-illustration {
+  font-size: 4rem;
+  margin-bottom: 1.5rem;
+}
+
+.quote {
+  background: white;
+  padding: 2rem;
+  border-radius: 15px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+  border-left: 4px solid #32CD32;
+}
+
+.quote p {
+  font-style: italic;
+  font-size: 1.2rem;
+  color: #32CD32;
+  margin-bottom: 0.5rem;
+}
+
+.quote span {
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.about-features {
+  padding: 80px 0;
+}
+
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 2rem;
+  margin-top: 3rem;
+}
+
+.feature-card {
+  background: white;
+  padding: 2.5rem;
+  border-radius: 15px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+  text-align: center;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.feature-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+}
+
+.feature-icon {
+  width: 80px;
+  height: 80px;
+  background: linear-gradient(135deg, #32CD32, #FFD700);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 1.5rem;
+  color: white;
+}
+
+.feature-icon svg {
+  width: 35px;
+  height: 35px;
+}
+
+.feature-card h3 {
+  font-size: 1.4rem;
+  color: #32CD32;
+  margin-bottom: 1rem;
+}
+
+.feature-card p {
+  color: #666;
+  line-height: 1.6;
+}
+
+.about-mission {
+  padding: 80px 0;
+  background: #f8f9fa;
+}
+
+.mission-content {
+  text-align: center;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.mission-content h2 {
+  font-size: 2.5rem;
+  color: #32CD32;
+  margin-bottom: 2rem;
+}
+
+.mission-text {
+  font-size: 1.2rem;
+  line-height: 1.8;
+  color: #555;
+  margin-bottom: 3rem;
+}
+
+.mission-values {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 2rem;
+  margin-top: 3rem;
+}
+
+.value {
+  background: white;
+  padding: 2rem;
+  border-radius: 10px;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+}
+
+.value h4 {
+  font-size: 1.3rem;
+  font-weight: 600;
+  color: #32CD32;
+  margin-bottom: 1rem;
+}
+
+.value p {
+  color: #666;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 768px) {
+  .page-title {
+    font-size: 2.5rem;
+  }
+  
+  .page-subtitle {
+    font-size: 1.1rem;
+  }
+  
+  .story-content {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+  }
+  
+  .story-text h2 {
+    font-size: 2rem;
+  }
+  
+  .features-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .feature-card {
+    padding: 2rem;
+  }
+  
+  .mission-content h2 {
+    font-size: 2rem;
+  }
+  
+  .mission-text {
+    font-size: 1.1rem;
+  }
+  
+  .mission-values {
+    grid-template-columns: 1fr;
+  }
+} 
+
+.about-section h2 {
+  font-size: 2.5rem;
+  font-weight: 700;
+  margin-bottom: 2rem;
+  color: #32CD32;
+  text-align: center;
+}
+
+.team-section {
+  padding: 5rem 0;
+  background: linear-gradient(135deg, #32CD32, #FFD700);
+}
+
+.team-member h3 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #32CD32;
+  margin-bottom: 0.5rem;
+}
+
+.values-item h4 {
+  font-size: 1.3rem;
+  font-weight: 600;
+  color: #32CD32;
+  margin-bottom: 1rem;
+}
+
+.timeline-item h4 {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #32CD32;
+  margin-bottom: 0.5rem;
+} 

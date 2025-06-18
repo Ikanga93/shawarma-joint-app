@@ -1,0 +1,17 @@
+[build]
+builder = "nixpacks"
+
+[deploy]
+healthcheckPath = "/health"
+healthcheckTimeout = 300
+restartPolicyType = "on_failure"
+startCommand = "npm run start:railway"
+
+[services.variables]
+NODE_ENV = "production"
+
+[environments.production]
+variables = {}
+
+[volumes]
+uploads = "/app/uploads"

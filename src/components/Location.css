@@ -1,0 +1,174 @@
+.location {
+  background: white;
+}
+
+.location-content {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 40px;
+}
+
+.schedule-card {
+  padding: 40px;
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  margin-bottom: 30px;
+  padding-bottom: 20px;
+  border-bottom: 2px solid var(--cream);
+}
+
+.card-icon {
+  color: var(--primary-red);
+  width: 24px;
+  height: 24px;
+}
+
+.card-header h3 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--dark-brown);
+  margin: 0;
+}
+
+.schedule-list {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.schedule-item {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 20px;
+  background: var(--cream);
+  border-radius: 15px;
+  transition: all 0.3s ease;
+}
+
+.schedule-item:hover {
+  background: #FFF3E0;
+  transform: translateX(5px);
+}
+
+.schedule-day {
+  min-width: 100px;
+  font-weight: 600;
+  color: var(--dark-brown);
+}
+
+.schedule-details {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.schedule-location,
+.schedule-time {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-light);
+  font-size: 0.95rem;
+}
+
+.schedule-location svg,
+.schedule-time svg {
+  color: var(--primary-red);
+}
+
+.location-info {
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+}
+
+.info-card,
+.contact-card {
+  padding: 30px;
+}
+
+.info-card h3,
+.contact-card h3 {
+  font-size: 1.3rem;
+  font-weight: 600;
+  color: var(--dark-brown);
+  margin-bottom: 15px;
+}
+
+.info-card p,
+.contact-card p {
+  color: var(--text-light);
+  margin-bottom: 20px;
+  line-height: 1.6;
+}
+
+.social-links {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.social-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text-dark);
+  text-decoration: none;
+  padding: 10px;
+  border-radius: 10px;
+  transition: all 0.3s ease;
+}
+
+.social-link:hover {
+  background: var(--cream);
+  color: var(--primary-red);
+  transform: translateX(5px);
+}
+
+.contact-info {
+  margin-bottom: 25px;
+}
+
+.contact-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+  color: var(--text-dark);
+}
+
+@media (max-width: 768px) {
+  .location-content {
+    grid-template-columns: 1fr;
+    gap: 30px;
+  }
+  
+  .schedule-card {
+    padding: 25px;
+  }
+  
+  .schedule-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 15px;
+  }
+  
+  .schedule-day {
+    min-width: auto;
+  }
+  
+  .schedule-details {
+    width: 100%;
+  }
+  
+  .info-card,
+  .contact-card {
+    padding: 25px;
+  }
+} 

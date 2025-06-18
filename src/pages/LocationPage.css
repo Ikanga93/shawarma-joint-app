@@ -1,0 +1,648 @@
+.location-page {
+  min-height: 100vh;
+  padding-top: 0;
+}
+
+.location-hero {
+  background: linear-gradient(135deg, var(--cream) 0%, #FFF3E0 50%, var(--warm-yellow) 100%);
+  padding: 60px 0;
+  position: relative;
+}
+
+.location-hero::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: 
+    radial-gradient(circle at 20% 80%, rgba(211, 47, 47, 0.1) 0%, transparent 50%),
+    radial-gradient(circle at 80% 20%, rgba(56, 142, 60, 0.1) 0%, transparent 50%);
+}
+
+.location-hero .container {
+  position: relative;
+  z-index: 2;
+}
+
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--primary-red);
+  text-decoration: none;
+  font-weight: 500;
+  margin-bottom: 30px;
+  transition: all 0.3s ease;
+}
+
+.back-link:hover {
+  color: var(--dark-brown);
+  transform: translateX(-5px);
+}
+
+.location-page-title {
+  font-size: 3.5rem;
+  font-weight: 700;
+  color: var(--dark-brown);
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.location-page-subtitle {
+  font-size: 1.3rem;
+  color: var(--text-light);
+  text-align: center;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+/* Today's Location Section */
+.todays-location {
+  padding: 60px 0;
+  background: white;
+}
+
+.today-card {
+  background: linear-gradient(135deg, var(--primary-red), #E57373);
+  color: white;
+  border-radius: 25px;
+  padding: 40px;
+  box-shadow: 0 15px 40px rgba(211, 47, 47, 0.3);
+  position: relative;
+  overflow: hidden;
+}
+
+.today-card::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  right: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
+  animation: float 6s ease-in-out infinite;
+}
+
+.today-header {
+  text-align: center;
+  margin-bottom: 30px;
+  position: relative;
+  z-index: 2;
+}
+
+.today-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.2);
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  margin-bottom: 15px;
+}
+
+.today-title {
+  font-size: 2.5rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+.today-content {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 40px;
+  align-items: center;
+  position: relative;
+  z-index: 2;
+}
+
+.today-info {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.info-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 1.1rem;
+}
+
+.info-icon {
+  color: rgba(255, 255, 255, 0.8);
+  width: 20px;
+  height: 20px;
+}
+
+.today-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.gps-btn {
+  background: white !important;
+  color: var(--primary-red) !important;
+  border: none !important;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 15px 25px;
+  border-radius: 25px;
+  font-weight: 600;
+  font-size: 1.1rem;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+  transition: all 0.3s ease;
+}
+
+.gps-btn:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+}
+
+.today-actions .btn-secondary {
+  background: rgba(255, 255, 255, 0.2) !important;
+  color: white !important;
+  border: 2px solid rgba(255, 255, 255, 0.3) !important;
+}
+
+.today-actions .btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.3) !important;
+}
+
+/* Weekly Schedule */
+.weekly-schedule {
+  padding: 80px 0;
+  background: #FAFAFA;
+}
+
+.schedule-title {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: var(--dark-brown);
+  text-align: center;
+  margin-bottom: 15px;
+}
+
+.schedule-subtitle {
+  font-size: 1.2rem;
+  color: var(--text-light);
+  text-align: center;
+  margin-bottom: 50px;
+}
+
+.schedule-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 25px;
+  margin-bottom: 60px;
+}
+
+.schedule-card {
+  background: white;
+  border-radius: 20px;
+  padding: 25px;
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+  border: 2px solid transparent;
+}
+
+.schedule-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+  border-color: var(--cream);
+}
+
+.schedule-card.today {
+  border-color: var(--primary-red);
+  box-shadow: 0 10px 30px rgba(211, 47, 47, 0.2);
+}
+
+.schedule-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  border-bottom: 2px solid #FFD700;
+  padding-bottom: 0.5rem;
+}
+
+.location-type {
+  background: var(--dark-brown);
+  color: white;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  text-transform: capitalize;
+}
+
+.location-description {
+  color: #666;
+  font-style: italic;
+  margin-bottom: 1rem;
+  line-height: 1.4;
+}
+
+.schedule-day {
+  font-size: 1.4rem;
+  font-weight: 600;
+  color: var(--dark-brown);
+  margin: 0;
+}
+
+.today-indicator {
+  background: var(--primary-red);
+  color: white;
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 4px 12px;
+  border-radius: 15px;
+}
+
+.schedule-location {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: var(--primary-red);
+  margin: 0 0 15px 0;
+}
+
+.schedule-details {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.detail-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text-light);
+  font-size: 0.95rem;
+}
+
+.detail-item svg {
+  color: var(--primary-green);
+  flex-shrink: 0;
+}
+
+.directions-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 12px;
+  background: linear-gradient(45deg, var(--primary-green), #66BB6A);
+  color: white;
+  border: none;
+  border-radius: 15px;
+  font-family: 'Fredoka', sans-serif;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.directions-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(56, 142, 60, 0.4);
+}
+
+/* Schedule Note */
+.schedule-note {
+  background: white;
+  border-radius: 20px;
+  padding: 40px;
+  text-align: center;
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+}
+
+.note-content h3 {
+  font-size: 1.5rem;
+  color: var(--dark-brown);
+  margin-bottom: 15px;
+}
+
+.note-content p {
+  color: var(--text-light);
+  font-size: 1.1rem;
+  line-height: 1.6;
+  margin-bottom: 25px;
+}
+
+.contact-info {
+  display: flex;
+  justify-content: center;
+  gap: 30px;
+  flex-wrap: wrap;
+}
+
+.contact-link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--primary-red);
+  text-decoration: none;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.contact-link:hover {
+  color: var(--dark-brown);
+  transform: translateY(-2px);
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-10px) rotate(5deg);
+  }
+}
+
+@media (max-width: 768px) {
+  .location-page {
+    padding-top: 0;
+  }
+
+  .location-hero {
+    padding: 40px 0;
+  }
+
+  .location-page-title {
+    font-size: 2.5rem;
+  }
+
+  .location-page-subtitle {
+    font-size: 1.1rem;
+  }
+
+  .today-card {
+    padding: 30px 20px;
+  }
+
+  .today-title {
+    font-size: 2rem;
+  }
+
+  .today-content {
+    grid-template-columns: 1fr;
+    gap: 25px;
+    text-align: center;
+  }
+
+  .today-actions {
+    flex-direction: row;
+    justify-content: center;
+  }
+
+  .schedule-grid {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+
+  .schedule-card {
+    padding: 20px;
+  }
+
+  .contact-info {
+    flex-direction: column;
+    gap: 15px;
+  }
+
+  .schedule-note {
+    padding: 30px 20px;
+  }
+}
+
+/* Add live locations styling after existing styles */
+
+/* Live Locations Section (New functionality) */
+.live-locations {
+  background: linear-gradient(135deg, #ff6b6b, #e63946);
+  color: white;
+  padding: 3rem 0;
+  margin: 2rem 0;
+}
+
+.live-locations-title {
+  font-size: 2.5rem;
+  font-weight: bold;
+  text-align: center;
+  margin-bottom: 0.5rem;
+  color: white;
+}
+
+.live-locations-subtitle {
+  text-align: center;
+  font-size: 1.2rem;
+  margin-bottom: 2rem;
+  opacity: 0.9;
+}
+
+.live-locations-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  gap: 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.live-location-card {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border-radius: 20px;
+  padding: 2rem;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.live-location-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+}
+
+.live-location-header {
+  margin-bottom: 1.5rem;
+}
+
+.live-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: rgba(0, 255, 0, 0.8);
+  color: white;
+  padding: 0.3rem 0.8rem;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: bold;
+  margin-bottom: 1rem;
+}
+
+.live-indicator {
+  color: #00ff00;
+  font-size: 1.2rem;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% { opacity: 1; }
+  50% { opacity: 0.5; }
+  100% { opacity: 1; }
+}
+
+.live-truck-name {
+  font-size: 1.8rem;
+  font-weight: bold;
+  margin: 0;
+  color: white;
+}
+
+.live-location-content {
+  margin-bottom: 1rem;
+}
+
+.live-location-info {
+  margin-bottom: 1.5rem;
+}
+
+.live-location-info .info-item {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  margin-bottom: 0.8rem;
+  color: white;
+}
+
+.live-location-info .info-icon {
+  flex-shrink: 0;
+  opacity: 0.9;
+}
+
+.live-location-info .description {
+  font-style: italic;
+  opacity: 0.9;
+  margin-left: 0.5rem;
+}
+
+.live-location-actions {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.live-location-actions .btn {
+  flex: 1;
+  border: 2px solid rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  transition: all 0.3s ease;
+}
+
+.live-location-actions .btn:hover {
+  background: white;
+  color: #e63946;
+  transform: translateY(-2px);
+}
+
+.live-location-time {
+  font-size: 0.85rem;
+  opacity: 0.7;
+  text-align: center;
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
+  padding-top: 1rem;
+  margin-top: 1rem;
+}
+
+/* Responsive design for live locations */
+@media (max-width: 768px) {
+  .live-locations-grid {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+  
+  .live-location-card {
+    padding: 1.5rem;
+  }
+  
+  .live-location-actions {
+    flex-direction: column;
+  }
+  
+  .live-locations-title {
+    font-size: 2rem;
+  }
+}
+
+/* Location Page Header */
+.location-page-header {
+  background: linear-gradient(45deg, #FFD700, #FFC107);
+  color: white;
+  text-align: center;
+  padding: 60px 20px;
+  margin-bottom: 40px;
+  box-shadow: 0 4px 15px rgba(255, 215, 0, 0.3);
+}
+
+.loading-section {
+  padding: 60px 0;
+  background: #f8f9fa;
+}
+
+.loading-message {
+  text-align: center;
+  color: #666;
+  font-size: 1.1rem;
+}
+
+.empty-locations {
+  padding: 80px 0;
+  background: #f8f9fa;
+}
+
+.empty-message {
+  text-align: center;
+  max-width: 400px;
+  margin: 0 auto;
+}
+
+.empty-message svg {
+  color: #ccc;
+  margin-bottom: 20px;
+}
+
+.empty-message h3 {
+  color: var(--dark-brown);
+  margin-bottom: 15px;
+  font-size: 1.5rem;
+}
+
+.empty-message p {
+  color: #666;
+  margin-bottom: 30px;
+  line-height: 1.6;
+}
+
+.empty-message .btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px;
+  background: var(--dark-brown);
+  color: white;
+  text-decoration: none;
+  border-radius: 8px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.empty-message .btn:hover {
+  background: #1a2e1a;
+  transform: translateY(-2px);
+} 

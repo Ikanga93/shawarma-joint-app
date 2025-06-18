@@ -1,0 +1,137 @@
+.about {
+  background: linear-gradient(135deg, var(--cream) 0%, #FFF8E1 100%);
+}
+
+.about-content {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 80px;
+  align-items: center;
+}
+
+.about-text .section-title {
+  text-align: left;
+  margin-bottom: 30px;
+}
+
+.about-story {
+  font-size: 1.1rem;
+  line-height: 1.8;
+  color: var(--text-light);
+  margin-bottom: 25px;
+}
+
+.about-features {
+  margin-top: 40px;
+}
+
+.feature {
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+  margin-bottom: 30px;
+}
+
+.feature-icon {
+  background: linear-gradient(45deg, var(--primary-red), #E57373);
+  color: white;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 5px 15px rgba(211, 47, 47, 0.3);
+}
+
+.feature-content h3 {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: var(--dark-brown);
+  margin-bottom: 5px;
+}
+
+.feature-content p {
+  color: var(--text-light);
+  line-height: 1.6;
+}
+
+.about-image {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 30px;
+}
+
+.chef-illustration {
+  font-size: 12rem;
+  text-align: center;
+  animation: float 4s ease-in-out infinite;
+  filter: drop-shadow(0 10px 20px rgba(0, 0, 0, 0.1));
+}
+
+.quote {
+  background: white;
+  padding: 30px;
+  border-radius: 20px;
+  text-align: center;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+  position: relative;
+}
+
+.quote::before {
+  content: '"';
+  position: absolute;
+  top: -10px;
+  left: 20px;
+  font-size: 4rem;
+  color: var(--primary-red);
+  font-family: serif;
+}
+
+.quote p {
+  font-size: 1.3rem;
+  font-style: italic;
+  color: var(--dark-brown);
+  margin-bottom: 15px;
+  font-weight: 500;
+}
+
+.quote span {
+  color: var(--primary-red);
+  font-weight: 600;
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-15px) rotate(2deg);
+  }
+}
+
+@media (max-width: 768px) {
+  .about-content {
+    grid-template-columns: 1fr;
+    gap: 50px;
+  }
+  
+  .about-text .section-title {
+    text-align: center;
+  }
+  
+  .chef-illustration {
+    font-size: 8rem;
+  }
+  
+  .feature {
+    gap: 15px;
+  }
+  
+  .feature-icon {
+    width: 40px;
+    height: 40px;
+  }
+} 

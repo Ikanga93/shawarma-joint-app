@@ -1,0 +1,48 @@
+<svg width="120" height="120" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+  <!-- Bull Head -->
+  <circle cx="60" cy="65" r="25" fill="#D2691E" stroke="#8B4513" stroke-width="2"/>
+  
+  <!-- Horns -->
+  <path d="M35 45 Q30 35 25 40 Q30 45 35 50" fill="#F5F5DC" stroke="#8B4513" stroke-width="1.5"/>
+  <path d="M85 45 Q90 35 95 40 Q90 45 85 50" fill="#F5F5DC" stroke="#8B4513" stroke-width="1.5"/>
+  
+  <!-- Eyes -->
+  <circle cx="52" cy="60" r="4" fill="white"/>
+  <circle cx="68" cy="60" r="4" fill="white"/>
+  <circle cx="52" cy="60" r="2" fill="black"/>
+  <circle cx="68" cy="60" r="2" fill="black"/>
+  
+  <!-- Snout -->
+  <ellipse cx="60" cy="75" rx="8" ry="6" fill="#F5DEB3" stroke="#8B4513" stroke-width="1"/>
+  
+  <!-- Nostrils -->
+  <ellipse cx="57" cy="75" rx="1.5" ry="2" fill="#8B4513"/>
+  <ellipse cx="63" cy="75" rx="1.5" ry="2" fill="#8B4513"/>
+  
+  <!-- Smile -->
+  <path d="M52 82 Q60 88 68 82" stroke="#8B4513" stroke-width="2" fill="none"/>
+  
+  <!-- Chef Hat -->
+  <ellipse cx="60" cy="35" rx="20" ry="8" fill="white" stroke="#DDD" stroke-width="1"/>
+  <rect x="45" y="25" width="30" height="15" fill="white" stroke="#DDD" stroke-width="1"/>
+  <ellipse cx="60" cy="25" rx="15" ry="10" fill="white" stroke="#DDD" stroke-width="1"/>
+  
+  <!-- Apron -->
+  <rect x="45" y="85" width="30" height="25" fill="white" stroke="#DDD" stroke-width="1" rx="3"/>
+  
+  <!-- Fernando's Text on Apron -->
+  <text x="60" y="95" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" font-weight="bold" fill="#D32F2F">Fernando's</text>
+  <text x="60" y="105" text-anchor="middle" font-family="Arial, sans-serif" font-size="6" fill="#388E3C">Tacos & More</text>
+  
+  <!-- Arms -->
+  <ellipse cx="30" cy="85" rx="8" ry="15" fill="#D2691E" stroke="#8B4513" stroke-width="1"/>
+  <ellipse cx="90" cy="85" rx="8" ry="15" fill="#D2691E" stroke="#8B4513" stroke-width="1"/>
+  
+  <!-- Taco in hand -->
+  <g transform="translate(85, 75)">
+    <path d="M0 0 Q5 -3 10 0 Q5 8 0 5 Z" fill="#F4A460"/>
+    <rect x="1" y="1" width="8" height="2" fill="#228B22"/>
+    <rect x="2" y="3" width="6" height="1" fill="#FF6347"/>
+    <rect x="1.5" y="4" width="7" height="1" fill="#FFD700"/>
+  </g>
+</svg> 

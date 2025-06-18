@@ -1,0 +1,163 @@
+.footer {
+  background: var(--dark-brown);
+  color: white;
+  padding: 50px 0 20px;
+}
+
+.footer-content {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: 50px;
+  margin-bottom: 30px;
+}
+
+.footer-brand {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.footer-logo {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.footer-logo-image {
+  flex-shrink: 0;
+}
+
+.footer-brand-text h3 {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--warm-yellow);
+  margin: 0 0 5px 0;
+}
+
+.footer-brand-text p {
+  color: #CCCCCC;
+  font-style: italic;
+  margin: 0;
+}
+
+.footer-emoji {
+  font-size: 2rem;
+}
+
+.footer-links {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 40px;
+}
+
+.footer-section h4 {
+  font-size: 1.2rem;
+  font-weight: 600;
+  margin-bottom: 20px;
+  color: var(--warm-yellow);
+}
+
+.footer-section ul {
+  list-style: none;
+  padding: 0;
+}
+
+.footer-section li {
+  margin-bottom: 10px;
+}
+
+.footer-section a {
+  color: #CCCCCC;
+  text-decoration: none;
+  transition: color 0.3s ease;
+}
+
+.footer-section a:hover {
+  color: var(--warm-yellow);
+}
+
+.contact-icons {
+  display: flex;
+  gap: 20px;
+  justify-content: flex-start;
+}
+
+.contact-icon-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 50px;
+  height: 50px;
+  background: linear-gradient(45deg, var(--primary-red), var(--light-orange));
+  border-radius: 50%;
+  font-size: 1.5rem;
+  text-decoration: none;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+.contact-icon-link:hover {
+  transform: translateY(-3px) scale(1.1);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+  background: linear-gradient(45deg, var(--warm-yellow), #FFD54F);
+}
+
+.footer-bottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 30px;
+  border-top: 1px solid #555;
+}
+
+.footer-bottom p {
+  color: #CCCCCC;
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+.admin-access {
+  color: #666;
+  text-decoration: none;
+  font-size: 0.8rem;
+  opacity: 0.6;
+  transition: all 0.3s ease;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.admin-access:hover {
+  opacity: 1;
+  color: #999;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+@media (max-width: 768px) {
+  .footer-content {
+    grid-template-columns: 1fr;
+    gap: 30px;
+    text-align: center;
+  }
+  
+  .footer-links {
+    grid-template-columns: 1fr;
+    gap: 30px;
+  }
+
+  .contact-icons {
+    justify-content: center;
+    gap: 15px;
+  }
+
+  .contact-icon-link {
+    width: 45px;
+    height: 45px;
+    font-size: 1.3rem;
+  }
+
+  .footer-bottom {
+    flex-direction: column;
+    gap: 10px;
+    text-align: center;
+  }
+} 
