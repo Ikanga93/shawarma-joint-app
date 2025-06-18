@@ -16,6 +16,40 @@ import { query, queryOne, queryAll, initializeDatabase } from './database.js'
 // Load environment variables first
 dotenv.config()
 
+// Enhanced environment debugging for Railway
+console.log('🔍 Environment check:')
+console.log('NODE_ENV:', process.env.NODE_ENV)
+console.log('isDevelopment:', process.env.NODE_ENV !== 'production')
+console.log('PORT:', process.env.PORT)
+console.log('DATABASE_URL exists:', !!process.env.DATABASE_URL)
+console.log('DATABASE_PRIVATE_URL exists:', !!process.env.DATABASE_PRIVATE_URL)
+console.log('DATABASE_PUBLIC_URL exists:', !!process.env.DATABASE_PUBLIC_URL)
+console.log('POSTGRES_URL exists:', !!process.env.POSTGRES_URL)
+console.log('JWT_SECRET exists:', !!process.env.JWT_SECRET)
+console.log('STRIPE_SECRET_KEY exists:', !!process.env.STRIPE_SECRET_KEY)
+console.log('FRONTEND_URL:', process.env.FRONTEND_URL || 'Not set (will be dynamically determined)')
+
+// Railway-specific debugging
+if (process.env.RAILWAY_ENVIRONMENT) {
+  console.log('🚂 Railway Environment:', process.env.RAILWAY_ENVIRONMENT)
+  console.log('🚂 Railway Service Name:', process.env.RAILWAY_SERVICE_NAME)
+  console.log('🚂 Railway Project ID:', process.env.RAILWAY_PROJECT_ID)
+}
+
+const hasPostgresUrl = process.env.DATABASE_URL || process.env.DATABASE_PRIVATE_URL || process.env.DATABASE_PUBLIC_URL || process.env.POSTGRES_URL
+console.log('hasPostgresUrl:', !!hasPostgresUrl)
+
+if (process.env.NODE_ENV === 'production') {
+  console.log('🚀 Production mode: Using PostgreSQL database')
+  if (hasPostgresUrl) {
+    console.log('🔗 Database URL found: Yes (hidden for security)')
+  } else {
+    console.log('❌ No database URL found! Check Railway PostgreSQL service connection.')
+  }
+} else {
+  console.log('🔧 Development mode: Using SQLite database')
+}
+
 // Set timezone to Central Time
 process.env.TZ = 'America/Chicago'
 
@@ -1336,9 +1370,50 @@ if (process.env.NODE_ENV === 'production') {
 const PORT = process.env.PORT || 3002
 const HOST = process.env.NODE_ENV === 'production' ? '0.0.0.0' : 'localhost'
 
+console.log(`🔧 Starting server with PORT: ${PORT}, HOST: ${HOST}`)
+
 server.listen(PORT, HOST, () => {
   console.log(`🚀 Server running on ${HOST}:${PORT}`)
   console.log(`📊 Dashboard: http://${HOST}:${PORT}/api/dashboard`)
   console.log(`🛒 Orders API: http://${HOST}:${PORT}/api/orders`)
   console.log(`💚 Health Check: http://${HOST}:${PORT}/health`)
+  console.log(`✅ Server startup successful!`)
+  
+  // Test health endpoint after startup
+  setTimeout(() => {
+    const http = require('http')
+    const options = {
+      hostname: HOST === '0.0.0.0' ? 'localhost' : HOST,
+      port: PORT,
+      path: '/health',
+      method: 'GET'
+    }
+    
+    const req = http.request(options, (res) => {
+      console.log(`🔍 Health check status: ${res.statusCode}`)
+      if (res.statusCode === 200) {
+        console.log(`✅ Health check passed - server is responding correctly`)
+      } else {
+        console.log(`⚠️ Health check returned status ${res.statusCode}`)
+      }
+    })
+    
+    req.on('error', (err) => {
+      console.error('❌ Health check failed:', err.message)
+    })
+    
+    req.end()
+  }, 2000) // Wait 2 seconds after startup
+}).on('error', (err) => {
+  console.error('❌ Server startup failed:', err)
+  console.error('Error code:', err.code)
+  console.error('Error message:', err.message)
+  
+  if (err.code === 'EADDRINUSE') {
+    console.error(`Port ${PORT} is already in use`)
+  } else if (err.code === 'EACCES') {
+    console.error(`Permission denied to bind to port ${PORT}`)
+  }
+  
+  process.exit(1)
 }) 
