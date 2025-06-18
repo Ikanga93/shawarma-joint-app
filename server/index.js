@@ -19,7 +19,7 @@ dotenv.config()
 
 // Global error handling to prevent crashes
 process.on('uncaughtException', (error) => {
-  console.error('🚨 Uncaught Exception:', error)
+  console.error(' Uncaught Exception:', error)
   console.error('Stack:', error.stack)
   // Log but don't exit in production to maintain service availability
   if (process.env.NODE_ENV !== 'production') {
@@ -28,7 +28,7 @@ process.on('uncaughtException', (error) => {
 })
 
 process.on('unhandledRejection', (reason, promise) => {
-  console.error('🚨 Unhandled Rejection at:', promise, 'reason:', reason)
+  console.error(' Unhandled Rejection at:', promise, 'reason:', reason)
   // Log but don't exit in production to maintain service availability
   if (process.env.NODE_ENV !== 'production') {
     process.exit(1)
@@ -36,7 +36,7 @@ process.on('unhandledRejection', (reason, promise) => {
 })
 
 // Enhanced environment debugging for Railway
-console.log('🔍 Environment check:')
+console.log(' Environment check:')
 console.log('NODE_ENV:', process.env.NODE_ENV)
 console.log('isDevelopment:', process.env.NODE_ENV !== 'production')
 console.log('PORT:', process.env.PORT)
@@ -50,23 +50,23 @@ console.log('FRONTEND_URL:', process.env.FRONTEND_URL || 'Not set (will be dynam
 
 // Railway-specific debugging
 if (process.env.RAILWAY_ENVIRONMENT) {
-  console.log('🚂 Railway Environment:', process.env.RAILWAY_ENVIRONMENT)
-  console.log('🚂 Railway Service Name:', process.env.RAILWAY_SERVICE_NAME)
-  console.log('🚂 Railway Project ID:', process.env.RAILWAY_PROJECT_ID)
+  console.log(' Railway Environment:', process.env.RAILWAY_ENVIRONMENT)
+  console.log(' Railway Service Name:', process.env.RAILWAY_SERVICE_NAME)
+  console.log(' Railway Project ID:', process.env.RAILWAY_PROJECT_ID)
 }
 
 const hasPostgresUrl = process.env.DATABASE_URL || process.env.DATABASE_PRIVATE_URL || process.env.DATABASE_PUBLIC_URL || process.env.POSTGRES_URL
 console.log('hasPostgresUrl:', !!hasPostgresUrl)
 
 if (process.env.NODE_ENV === 'production') {
-  console.log('🚀 Production mode: Using PostgreSQL database')
+  console.log(' Production mode: Using PostgreSQL database')
   if (hasPostgresUrl) {
-    console.log('🔗 Database URL found: Yes (hidden for security)')
+    console.log(' Database URL found: Yes (hidden for security)')
   } else {
-    console.log('❌ No database URL found! Check Railway PostgreSQL service connection.')
+    console.log(' No database URL found! Check Railway PostgreSQL service connection.')
   }
 } else {
-  console.log('🔧 Development mode: Using SQLite database')
+  console.log(' Development mode: Using SQLite database')
 }
 
 // Set timezone to Central Time
@@ -154,7 +154,7 @@ app.use(express.json({ limit: '10mb' }))
 
 // Health check endpoint - FIRST for Railway
 app.get('/health', (req, res) => {
-  console.log('🏥 Health check endpoint called')
+  console.log(' Health check endpoint called')
   res.json({
     status: 'healthy',
     timestamp: new Date().toISOString(),
@@ -168,7 +168,7 @@ app.get('/health', (req, res) => {
 
 // Simple test endpoint for debugging 502 errors
 app.get('/test', (req, res) => {
-  console.log('🧪 Test endpoint called')
+  console.log(' Test endpoint called')
   res.json({ 
     message: 'Server is responding!', 
     timestamp: new Date().toISOString(),
@@ -181,7 +181,7 @@ app.get('/test', (req, res) => {
 
 // Root endpoint
 app.get('/', (req, res) => {
-  console.log('🏠 Root endpoint called')
+  console.log(' Root endpoint called')
   if (process.env.NODE_ENV === 'production') {
     // In production, serve the React app
     const indexPath = path.join(__dirname, '../dist/index.html')
@@ -316,8 +316,8 @@ app.post('/api/orders', async (req, res) => {
     frontendUrl = frontendUrl.replace(/\/+$/, '')
     
     // Log the frontend URL for debugging
-    console.log(`🔗 Frontend URL for Stripe: ${frontendUrl}`)
-    console.log(`🔗 Success URL will be: ${frontendUrl}/order-success?session_id={CHECKOUT_SESSION_ID}&order_id=${orderId}`)
+    console.log(` Frontend URL for Stripe: ${frontendUrl}`)
+    console.log(` Success URL will be: ${frontendUrl}/order-success?session_id={CHECKOUT_SESSION_ID}&order_id=${orderId}`)
 
     // Create Stripe checkout session
     const session = await stripe.checkout.sessions.create({
@@ -520,12 +520,12 @@ app.post('/api/verify-payment', async (req, res) => {
       })
     }
 
-    console.log(`🔍 Verifying payment for session: ${sessionId}, order: ${orderId}`)
+    console.log(` Verifying payment for session: ${sessionId}, order: ${orderId}`)
 
     // Retrieve the session from Stripe
     const session = await stripe.checkout.sessions.retrieve(sessionId)
     
-    console.log(`💳 Stripe session status: ${session.payment_status}`)
+    console.log(` Stripe session status: ${session.payment_status}`)
 
     if (session.payment_status === 'paid') {
       // Update order status to confirmed and payment to completed
@@ -554,14 +554,14 @@ app.post('/api/verify-payment', async (req, res) => {
         io.to(`order-${orderId}`).emit('order-status-updated', updatedOrder)
       }
 
-      console.log(`✅ Payment verified successfully for order: ${orderId}`)
+      console.log(` Payment verified successfully for order: ${orderId}`)
       res.json({ success: true, paymentStatus: 'completed' })
     } else {
-      console.log(`⚠️ Payment not completed. Status: ${session.payment_status}`)
+      console.log(` Payment not completed. Status: ${session.payment_status}`)
       res.json({ success: false, paymentStatus: session.payment_status })
     }
   } catch (error) {
-    console.error('❌ Error verifying payment:', error)
+    console.error(' Error verifying payment:', error)
     
     // Provide more specific error messages
     if (error.message.includes('No such checkout.session')) {
@@ -912,13 +912,13 @@ app.delete('/api/live-locations/:id', authenticateToken, authorizeRole(['admin']
 
 // Timer to update cooking orders - start after database is ready
 setTimeout(() => {
-  console.log('🕐 Starting cooking timer...')
+  console.log(' Starting cooking timer...')
   setInterval(async () => {
     try {
-      console.log('🔄 Timer running - checking cooking orders...')
+      console.log(' Timer running - checking cooking orders...')
       // Simplified query to debug SQL syntax
       const rows = await queryAll('SELECT * FROM orders WHERE status = ? AND time_remaining > 0', ['cooking'])
-      console.log(`📊 Found ${rows.length} cooking orders`)
+      console.log(` Found ${rows.length} cooking orders`)
       
       for (const order of rows) {
         const newTimeRemaining = Math.max(0, order.time_remaining - 1)
@@ -1395,13 +1395,13 @@ if (process.env.NODE_ENV === 'production') {
     }
     
     // Enhanced logging for debugging double slash issues
-    console.log(`🔄 Serving React app for route: ${req.path}`)
-    console.log(`🔄 Full URL: ${req.protocol}://${req.get('host')}${req.originalUrl}`)
-    console.log(`🔄 Query params: ${JSON.stringify(req.query)}`)
+    console.log(` Serving React app for route: ${req.path}`)
+    console.log(` Full URL: ${req.protocol}://${req.get('host')}${req.originalUrl}`)
+    console.log(` Query params: ${JSON.stringify(req.query)}`)
     
     // Check for double slash in path and log it
     if (req.path.includes('//')) {
-      console.log(`⚠️ DOUBLE SLASH DETECTED in path: ${req.path}`)
+      console.log(` DOUBLE SLASH DETECTED in path: ${req.path}`)
     }
     
     // Set proper headers for HTML
@@ -1415,7 +1415,7 @@ if (process.env.NODE_ENV === 'production') {
     if (fs.existsSync(indexPath)) {
       res.sendFile(indexPath);
     } else {
-      console.error('❌ index.html not found at:', indexPath);
+      console.error(' index.html not found at:', indexPath);
       res.status(500).send('Server configuration error: index.html not found');
     }
   })
@@ -1423,23 +1423,23 @@ if (process.env.NODE_ENV === 'production') {
 
 // Start server
 const PORT = process.env.PORT || 3002
-const HOST = process.env.NODE_ENV === 'production' ? '::' : 'localhost'
+const HOST = process.env.NODE_ENV === 'production' ? '0.0.0.0' : 'localhost'
 
-console.log(`🔧 Starting server with PORT: ${PORT}, HOST: ${HOST}`)
+console.log(` Starting server with PORT: ${PORT}, HOST: ${HOST}`)
 
 server.listen(PORT, HOST, () => {
-  console.log(`🚀 Server running on ${HOST}:${PORT}`)
-  console.log(`📊 Dashboard: http://${HOST}:${PORT}/api/dashboard`)
-  console.log(`🛒 Orders API: http://${HOST}:${PORT}/api/orders`)
-  console.log(`💚 Health Check: http://${HOST}:${PORT}/health`)
-  console.log(`✅ Server startup successful!`)
+  console.log(` Server running on ${HOST}:${PORT}`)
+  console.log(` Dashboard: http://${HOST}:${PORT}/api/dashboard`)
+  console.log(` Orders API: http://${HOST}:${PORT}/api/orders`)
+  console.log(` Health Check: http://${HOST}:${PORT}/health`)
+  console.log(` Server startup successful!`)
   
   // Simplified health check for Railway environment
   setTimeout(() => {
     // Skip health check in production to avoid connection issues
     if (process.env.NODE_ENV === 'production') {
-      console.log(`🔍 Health check skipped in production environment`)
-      console.log(`✅ Server is ready to accept connections`)
+      console.log(` Health check skipped in production environment`)
+      console.log(` Server is ready to accept connections`)
       return
     }
     
@@ -1451,39 +1451,39 @@ server.listen(PORT, HOST, () => {
     }
     
     const req = http.request(options, (res) => {
-      console.log(`🔍 Health check status: ${res.statusCode}`)
+      console.log(` Health check status: ${res.statusCode}`)
       if (res.statusCode === 200) {
-        console.log(`✅ Health check passed - server is responding correctly`)
+        console.log(` Health check passed - server is responding correctly`)
       } else {
-        console.log(`⚠️ Health check returned status ${res.statusCode}`)
+        console.log(` Health check returned status ${res.statusCode}`)
       }
     })
     
     req.on('error', (err) => {
-      console.error('❌ Health check failed:', err.message)
+      console.error(' Health check failed:', err.message)
     })
     
     req.setTimeout(5000, () => {
       req.destroy()
-      console.log('⏰ Health check timed out')
+      console.log(' Health check timed out')
     })
     
     req.end()
   }, 2000) // Wait 2 seconds after startup
 }).on('error', (err) => {
-  console.error('❌ Server startup failed:', err)
+  console.error(' Server startup failed:', err)
   console.error('Error code:', err.code)
   console.error('Error message:', err.message)
   
   if (err.code === 'EADDRINUSE') {
     console.error(`Port ${PORT} is already in use`)
-    console.error(`💡 Try a different port or kill the process using this port`)
+    console.error(` Try a different port or kill the process using this port`)
   } else if (err.code === 'EACCES') {
     console.error(`Permission denied to bind to port ${PORT}`)
-    console.error(`💡 Try running with elevated privileges or use a port > 1024`)
+    console.error(` Try running with elevated privileges or use a port > 1024`)
   } else if (err.code === 'ENOTFOUND') {
     console.error(`Host ${HOST} not found`)
-    console.error(`💡 Check if the host address is correct`)
+    console.error(` Check if the host address is correct`)
   }
   
   // Don't exit in production to prevent Railway from restarting unnecessarily
