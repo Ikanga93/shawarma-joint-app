@@ -152,6 +152,53 @@ app.use(cors({
 // Increased JSON payload limit to handle base64 encoded images (default is 100kb)
 app.use(express.json({ limit: '10mb' }))
 
+// Health check endpoint - FIRST for Railway
+app.get('/health', (req, res) => {
+  console.log('🏥 Health check endpoint called')
+  res.json({
+    status: 'healthy',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    environment: process.env.NODE_ENV,
+    version: '1.0.0',
+    port: process.env.PORT,
+    host: process.env.NODE_ENV === 'production' ? '0.0.0.0' : 'localhost'
+  })
+})
+
+// Simple test endpoint for debugging 502 errors
+app.get('/test', (req, res) => {
+  console.log('🧪 Test endpoint called')
+  res.json({ 
+    message: 'Server is responding!', 
+    timestamp: new Date().toISOString(),
+    port: process.env.PORT,
+    host: req.get('host'),
+    url: req.url,
+    method: req.method
+  })
+})
+
+// Root endpoint
+app.get('/', (req, res) => {
+  console.log('🏠 Root endpoint called')
+  if (process.env.NODE_ENV === 'production') {
+    // In production, serve the React app
+    const indexPath = path.join(__dirname, '../dist/index.html')
+    if (fs.existsSync(indexPath)) {
+      res.sendFile(indexPath)
+    } else {
+      res.status(500).send('React app not found')
+    }
+  } else {
+    res.json({ 
+      message: 'Fernando\'s Food Truck API', 
+      environment: process.env.NODE_ENV,
+      endpoints: ['/health', '/test', '/api/menu', '/api/locations']
+    })
+  }
+})
+
 // Initialize database
 initializeDatabase()
 
@@ -1199,47 +1246,6 @@ app.get('/api/auth/me', authenticateToken, async (req, res) => {
   }
 })
 
-// Health check endpoint
-app.get('/health', (req, res) => {
-  res.json({
-    status: 'healthy',
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime(),
-    environment: process.env.NODE_ENV,
-    version: '1.0.0'
-  })
-})
-
-// Simple test endpoint for debugging 502 errors
-app.get('/test', (req, res) => {
-  console.log('🧪 Test endpoint called')
-  res.json({ 
-    message: 'Server is responding!', 
-    timestamp: new Date().toISOString(),
-    port: process.env.PORT,
-    host: req.get('host')
-  })
-})
-
-// Another simple endpoint
-app.get('/', (req, res) => {
-  if (process.env.NODE_ENV === 'production') {
-    // In production, serve the React app
-    const indexPath = path.join(__dirname, '../dist/index.html')
-    if (fs.existsSync(indexPath)) {
-      res.sendFile(indexPath)
-    } else {
-      res.status(500).send('React app not found')
-    }
-  } else {
-    res.json({ 
-      message: 'Fernando\'s Food Truck API', 
-      environment: process.env.NODE_ENV,
-      endpoints: ['/health', '/test', '/api/menu', '/api/locations']
-    })
-  }
-})
-
 // Route debugging endpoint
 app.get('/api/debug-routes', (req, res) => {
   const path = require('path')
@@ -1383,8 +1389,8 @@ if (process.env.NODE_ENV === 'production') {
   
   // Handle all non-API routes by serving the React app
   app.get('*', (req, res) => {
-    // Don't serve React app for API routes
-    if (req.path.startsWith('/api') || req.path.startsWith('/health')) {
+    // Don't serve React app for API routes or health check
+    if (req.path.startsWith('/api') || req.path.startsWith('/health') || req.path.startsWith('/test')) {
       return res.status(404).json({ error: 'API endpoint not found' })
     }
     
