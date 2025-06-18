@@ -30,9 +30,8 @@ import { useBusinessConfig } from '../context/BusinessContext'
 import DashboardHeader from '../components/DashboardHeader'
 import ApiService from '../services/ApiService'
 import io from 'socket.io-client'
+import API_BASE_URL from '../config/api.js'
 import './DashboardPage.css'
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3002'
 
 const DashboardPage = ({ onLogout }) => {
   const { config } = useBusinessConfig()
@@ -1763,7 +1762,7 @@ const DashboardPage = ({ onLogout }) => {
             <h3>
               {allOrdersFilter === 'all' 
                 ? 'No orders yet' 
-                : `No ${allOrdersFilter} orders`
+                : `${allOrdersFilter.charAt(0).toUpperCase() + allOrdersFilter.slice(1)} orders`
               }
             </h3>
             <p>

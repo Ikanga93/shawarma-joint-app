@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { X, Plus, Minus, ShoppingCart, CreditCard, MapPin, Truck, Building, LogIn, User } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import ApiService from '../services/ApiService'
+import API_BASE_URL from '../config/api.js'
 import { useCart } from '../context/CartContext'
 import { useCustomerAuth } from '../contexts/CustomerAuthContext'
 import './Cart.css'
@@ -258,7 +259,7 @@ const Cart = ({ isOpen, onClose }) => {
                         <div className="cart-item-image">
                           {item.image_url ? (
                             <img 
-                              src={item.image_url.startsWith('data:') ? item.image_url : `${process.env.REACT_APP_API_URL || 'http://localhost:3002'}${item.image_url}`} 
+                              src={item.image_url.startsWith('data:') ? item.image_url : `${API_BASE_URL}${item.image_url}`} 
                               alt={item.name}
                               className="cart-image"
                             />
