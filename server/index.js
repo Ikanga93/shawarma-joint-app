@@ -42,16 +42,18 @@ const server = createServer(app)
 const getCorsOrigin = () => {
   if (process.env.NODE_ENV === 'production') {
     // If FRONTEND_URL is set, use it along with Railway domains
+    const allowedOrigins = ["https://*.railway.app", "https://*.up.railway.app"]
+    
     if (process.env.FRONTEND_URL) {
-      return [process.env.FRONTEND_URL, "https://*.railway.app", "https://*.up.railway.app"]
+      allowedOrigins.unshift(process.env.FRONTEND_URL)
     }
-    // For Railway and other deployments, allow same origin and Railway domains
-    return ["https://*.railway.app", "https://*.up.railway.app", (origin, callback) => {
+    
+    return [...allowedOrigins, (origin, callback) => {
       // Allow requests with no origin (like mobile apps, or when serving from same domain)
       if (!origin) return callback(null, true)
       
       // Allow any https origin for production (Railway serves frontend and backend on same domain)
-      if (origin.startsWith('https://')) {
+      if (origin && origin.startsWith('https://')) {
         return callback(null, true)
       }
       
