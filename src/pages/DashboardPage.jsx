@@ -211,12 +211,23 @@ const DashboardPage = ({ onLogout }) => {
   // Load functions
   const loadOrders = async () => {
     try {
-      setIsLoadingOrders(true)
+      console.log('🔄 Loading orders from API...')
       const ordersData = await ApiService.getOrders()
+      console.log('✅ Orders loaded successfully:', {
+        count: ordersData.length,
+        sample: ordersData[0],
+        allOrderIds: ordersData.map(o => o.id)
+      })
       setOrders(ordersData)
     } catch (error) {
-      console.error('Error loading orders:', error)
-      throw error // Re-throw to be caught by the main error handler
+      console.error('❌ Error loading orders:', error)
+      if (error.message.includes('authentication') || error.message.includes('401')) {
+        console.log('🔐 Authentication error - redirecting to login')
+        navigate('/admin/login')
+      } else {
+        console.error('📡 API Error details:', error)
+        setOrders([]) // Set empty array on error to prevent crashes
+      }
     } finally {
       setIsLoadingOrders(false)
     }
@@ -264,37 +275,62 @@ const DashboardPage = ({ onLogout }) => {
 
   // Analytics calculation functions
   const calculateCustomerAnalytics = (orders) => {
-    console.log('calculateCustomerAnalytics called with orders:', orders.length)
+    console.log('🔍 calculateCustomerAnalytics called with orders:', orders.length)
+    console.log('📊 Sample order structure:', orders[0])
+    
+    if (!orders || orders.length === 0) {
+      console.log('⚠️ No orders provided to calculateCustomerAnalytics')
+      setCustomerAnalytics({
+        totalCustomers: 0,
+        newCustomers: 0,
+        returningCustomers: 0,
+        topCustomers: []
+      })
+      return
+    }
     
     const customerMap = new Map()
     const thirtyDaysAgo = new Date()
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
 
+    let processedOrders = 0
+    let skippedOrders = 0
+
     orders.forEach((order, index) => {
-      console.log(`Processing order ${index}:`, {
+      console.log(`🔄 Processing order ${index + 1}/${orders.length}:`, {
+        id: order.id,
         order_time: order.order_time,
+        order_date: order.order_date,
+        orderTime: order.orderTime,
         customer_email: order.customer_email,
         customer_phone: order.customer_phone,
         customer_name: order.customer_name,
-        total_amount: order.total_amount
+        total_amount: order.total_amount,
+        status: order.status
       })
 
+      // Try different date field names
+      const orderTimeField = order.order_time || order.order_date || order.orderTime
+      
       // Skip orders without valid order_time or customer identifier
-      if (!order.order_time || (!order.customer_email && !order.customer_phone)) {
-        console.log(`Skipping order ${index}: missing order_time or customer info`)
+      if (!orderTimeField || (!order.customer_email && !order.customer_phone)) {
+        console.log(`⏭️ Skipping order ${index + 1}: missing order_time or customer info`)
+        skippedOrders++
         return
       }
 
       let orderDate
       try {
-        orderDate = new Date(order.order_time)
+        orderDate = new Date(orderTimeField)
         // Check if date is valid
         if (isNaN(orderDate.getTime())) {
-          console.warn('Invalid order_time format:', order.order_time)
+          console.warn('❌ Invalid order_time format:', orderTimeField)
+          skippedOrders++
           return
         }
       } catch (error) {
-        console.warn('Error parsing order_time:', order.order_time, error)
+        console.warn('❌ Error parsing order_time:', orderTimeField, error)
+        skippedOrders++
         return
       }
 
@@ -320,6 +356,8 @@ const DashboardPage = ({ onLogout }) => {
         customer.firstOrder = orderDate
         customer.isNew = orderDate >= thirtyDaysAgo
       }
+      
+      processedOrders++
     })
 
     const customers = Array.from(customerMap.values())
@@ -329,11 +367,15 @@ const DashboardPage = ({ onLogout }) => {
       .sort((a, b) => b.totalSpent - a.totalSpent)
       .slice(0, 10)
 
-    console.log('Customer analytics calculated:', {
+    console.log('📈 Customer analytics calculated:', {
+      totalOrders: orders.length,
+      processedOrders,
+      skippedOrders,
       totalCustomers: customers.length,
       newCustomers,
       returningCustomers,
-      topCustomers: topCustomers.length
+      topCustomers: topCustomers.length,
+      sampleCustomer: customers[0]
     })
 
     setCustomerAnalytics({
@@ -345,12 +387,12 @@ const DashboardPage = ({ onLogout }) => {
   }
 
   const calculateOrderAnalytics = (orders) => {
-    console.log('calculateOrderAnalytics called with orders:', orders.length)
+    console.log('📊 calculateOrderAnalytics called with orders:', orders.length)
     
     const totalRevenue = orders.reduce((sum, order) => sum + (parseFloat(order.total_amount) || 0), 0)
     const averageOrderValue = orders.length > 0 ? totalRevenue / orders.length : 0
     
-    console.log('Revenue calculated:', { totalRevenue, averageOrderValue })
+    console.log('💸 Revenue calculated:', { totalRevenue, averageOrderValue })
     
     // Orders by status
     const ordersByStatus = orders.reduce((acc, order) => {
@@ -358,7 +400,7 @@ const DashboardPage = ({ onLogout }) => {
       return acc
     }, {})
 
-    console.log('Orders by status:', ordersByStatus)
+    console.log('📊 Orders by status:', ordersByStatus)
 
     // Popular items
     const itemMap = new Map()
@@ -380,7 +422,7 @@ const DashboardPage = ({ onLogout }) => {
       .sort((a, b) => b.quantity - a.quantity)
       .slice(0, 10)
 
-    console.log('Popular items calculated:', popularItems.length)
+    console.log('📈 Popular items calculated:', popularItems.length)
 
     // Revenue by day (last 7 days)
     const sevenDaysAgo = new Date()
@@ -392,7 +434,18 @@ const DashboardPage = ({ onLogout }) => {
       date.setDate(date.getDate() - i)
       const dateStr = date.toISOString().split('T')[0]
       
-      const dayOrders = orders.filter(order => order.order_time && order.order_time.startsWith(dateStr))
+      const dayOrders = orders.filter(order => {
+        try {
+          // Try different date field names
+          const orderTimeField = order.order_time || order.order_date || order.orderTime
+          if (!orderTimeField) return false
+          const orderDate = new Date(orderTimeField)
+          return orderDate.toISOString().split('T')[0] === dateStr
+        } catch (error) {
+          console.warn('❌ Error parsing order_time:', order.order_time, error)
+          return false
+        }
+      })
       const dayRevenue = dayOrders.reduce((sum, order) => sum + (parseFloat(order.total_amount) || 0), 0)
       
       revenueByDay.push({
@@ -402,24 +455,27 @@ const DashboardPage = ({ onLogout }) => {
       })
     }
 
-    console.log('Revenue by day calculated:', revenueByDay)
+    console.log('📊 Revenue by day calculated:', revenueByDay)
 
     // Orders by hour
     const ordersByHour = Array.from({ length: 24 }, (_, hour) => ({
       hour,
-      orders: orders.filter(order => {
-        if (!order.order_time) return false
+      count: orders.filter(order => {
         try {
-          const orderHour = new Date(order.order_time).getHours()
+          // Try different date field names
+          const orderTimeField = order.order_time || order.order_date || order.orderTime
+          if (!orderTimeField) return false
+          
+          const orderHour = new Date(orderTimeField).getHours()
           return orderHour === hour
         } catch (error) {
-          console.warn('Invalid order_time format:', order.order_time)
+          console.warn('❌ Invalid order_time format:', order.order_time)
           return false
         }
       }).length
     }))
 
-    console.log('Orders by hour calculated')
+    console.log('📊 Orders by hour calculated')
 
     setOrderAnalytics({
       totalRevenue,
@@ -433,15 +489,15 @@ const DashboardPage = ({ onLogout }) => {
 
   // Recalculate analytics when orders change
   useEffect(() => {
-    console.log('Analytics useEffect triggered. Orders:', orders.length)
-    console.log('Sample order data:', orders[0])
+    console.log('🔄 Analytics useEffect triggered. Orders:', orders.length)
+    console.log('📊 Sample order data:', orders[0])
     
     if (orders.length > 0) {
       try {
         calculateCustomerAnalytics(orders)
         calculateOrderAnalytics(orders)
       } catch (error) {
-        console.error('Error calculating analytics:', error)
+        console.error('❌ Error calculating analytics:', error)
         // Set default values to prevent crashes
         setCustomerAnalytics({
           totalCustomers: 0,
@@ -459,7 +515,7 @@ const DashboardPage = ({ onLogout }) => {
         })
       }
     } else {
-      console.log('No orders available for analytics')
+      console.log('⚠️ No orders available for analytics')
       // Initialize with empty state when no orders
       setCustomerAnalytics({
         totalCustomers: 0,
@@ -495,7 +551,7 @@ const DashboardPage = ({ onLogout }) => {
         )
       )
     } catch (error) {
-      console.error('Error updating order status:', error)
+      console.error('❌ Error updating order status:', error)
       alert('Failed to update order status. Please try again.')
     }
   }
@@ -513,7 +569,7 @@ const DashboardPage = ({ onLogout }) => {
         )
       )
     } catch (error) {
-      console.error('Error updating menu item:', error)
+      console.error('❌ Error updating menu item:', error)
       alert('Failed to update menu item. Please try again.')
     }
   }
@@ -523,7 +579,7 @@ const DashboardPage = ({ onLogout }) => {
       const addedItem = await ApiService.addMenuItem(newItem)
       setMenuItems(prevItems => [...prevItems, addedItem])
     } catch (error) {
-      console.error('Error adding menu item:', error)
+      console.error('❌ Error adding menu item:', error)
       alert('Failed to add menu item. Please try again.')
     }
   }
@@ -537,14 +593,14 @@ const DashboardPage = ({ onLogout }) => {
         )
       )
     } catch (error) {
-      console.error('Error updating location:', error)
+      console.error('❌ Error updating location:', error)
       alert('Failed to update location. Please try again.')
     }
   }
 
   // Menu item modal functions
   const openAddMenuModal = () => {
-    console.log('Opening add menu modal')
+    console.log('📦 Opening add menu modal')
     setEditingMenuItem(null)
     setMenuForm({
       name: '',
@@ -557,7 +613,7 @@ const DashboardPage = ({ onLogout }) => {
       imageFile: null
     })
     setShowMenuModal(true)
-    console.log('Modal state set to true')
+    console.log('📦 Modal state set to true')
   }
 
   const openEditMenuModal = (item) => {
@@ -630,9 +686,9 @@ const DashboardPage = ({ onLogout }) => {
 
       // Upload new image if selected
       if (menuForm.imageFile) {
-        console.log('Uploading image...')
+        console.log('📸 Uploading image...')
         imageUrl = await uploadImage(menuForm.imageFile)
-        console.log('Image uploaded successfully:', imageUrl)
+        console.log('📸 Image uploaded successfully:', imageUrl)
       }
 
       const menuData = {
@@ -645,15 +701,15 @@ const DashboardPage = ({ onLogout }) => {
         image_url: imageUrl
       }
 
-      console.log('Submitting menu data:', menuData)
+      console.log('📦 Submitting menu data:', menuData)
 
       if (editingMenuItem) {
         // Update existing item
-        console.log('Updating menu item:', editingMenuItem.id)
+        console.log('📝 Updating menu item:', editingMenuItem.id)
         await ApiService.updateMenuItem(editingMenuItem.id, menuData)
       } else {
         // Add new item
-        console.log('Adding new menu item')
+        console.log('📦 Adding new menu item')
         await ApiService.addMenuItem(menuData)
       }
 
@@ -662,7 +718,7 @@ const DashboardPage = ({ onLogout }) => {
       closeMenuModal()
       alert('Menu item saved successfully!')
     } catch (error) {
-      console.error('Error saving menu item:', error)
+      console.error('❌ Error saving menu item:', error)
       
       // Provide more specific error messages
       if (error.message.includes('authentication') || error.message.includes('401')) {
@@ -687,7 +743,7 @@ const DashboardPage = ({ onLogout }) => {
       await ApiService.deleteMenuItem(itemId)
       setMenuItems(prevItems => prevItems.filter(item => item.id !== itemId))
     } catch (error) {
-      console.error('Error deleting menu item:', error)
+      console.error('❌ Error deleting menu item:', error)
       alert('Failed to delete menu item. Please try again.')
     }
   }
@@ -772,7 +828,7 @@ const DashboardPage = ({ onLogout }) => {
 
       closeLocationModal()
     } catch (error) {
-      console.error('Error saving location:', error)
+      console.error('❌ Error saving location:', error)
       alert('Failed to save location. Please try again.')
     }
   }
@@ -785,7 +841,7 @@ const DashboardPage = ({ onLogout }) => {
         alert('Location deleted successfully!')
       }
     } catch (error) {
-      console.error('Error deleting location:', error)
+      console.error('❌ Error deleting location:', error)
       alert('Failed to delete location. Please try again.')
     }
   }
@@ -861,7 +917,7 @@ const DashboardPage = ({ onLogout }) => {
       await loadLiveLocations()
       closeLiveLocationModal()
     } catch (error) {
-      console.error('Error saving live location:', error)
+      console.error('❌ Error saving live location:', error)
       alert('Failed to save live location. Please try again.')
     }
   }
@@ -874,7 +930,7 @@ const DashboardPage = ({ onLogout }) => {
         alert('Live location deleted successfully!')
       }
     } catch (error) {
-      console.error('Error deleting live location:', error)
+      console.error('❌ Error deleting live location:', error)
       alert('Failed to delete live location. Please try again.')
     }
   }

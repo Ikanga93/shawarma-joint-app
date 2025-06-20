@@ -388,6 +388,38 @@ app.post('/api/orders', async (req, res) => {
   }
 })
 
+// Debug endpoint to check orders data
+app.get('/api/debug/orders', authenticateToken, authorizeRole(['admin']), async (req, res) => {
+  try {
+    const rows = await queryAll('SELECT COUNT(*) as total_count FROM orders')
+    const totalCount = rows[0].total_count
+    
+    const sampleRows = await queryAll('SELECT * FROM orders ORDER BY order_date DESC LIMIT 3')
+    const sampleOrders = sampleRows.map(row => ({
+      ...row,
+      items: JSON.parse(row.items),
+      orderTime: new Date(row.order_date),
+      order_time: row.order_date // Add this for analytics compatibility
+    }))
+    
+    const statusCounts = await queryAll(`
+      SELECT status, COUNT(*) as count 
+      FROM orders 
+      GROUP BY status
+    `)
+    
+    res.json({
+      totalOrders: totalCount,
+      sampleOrders,
+      statusBreakdown: statusCounts,
+      message: 'Debug info for orders table'
+    })
+  } catch (error) {
+    console.error('Error in debug orders endpoint:', error)
+    res.status(500).json({ error: 'Failed to fetch debug orders info' })
+  }
+})
+
 // Get all orders (for admin dashboard)
 app.get('/api/orders', authenticateToken, authorizeRole(['admin']), async (req, res) => {
   try {
@@ -395,7 +427,8 @@ app.get('/api/orders', authenticateToken, authorizeRole(['admin']), async (req, 
     const orders = rows.map(row => ({
       ...row,
       items: JSON.parse(row.items),
-      orderTime: new Date(row.order_date)
+      orderTime: new Date(row.order_date),
+      order_time: row.order_date // Add this for analytics compatibility
     }))
     res.json(orders)
   } catch (error) {
