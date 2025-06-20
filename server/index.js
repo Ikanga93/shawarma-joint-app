@@ -299,10 +299,11 @@ app.post('/api/orders', async (req, res) => {
     let frontendUrl = process.env.FRONTEND_URL
     
     if (!frontendUrl) {
-      // For Railway deployments, use the same domain but with https
+      // For Railway deployments, check if we have a specific frontend domain
       const host = req.get('host')
       if (host && host.includes('railway.app')) {
-        frontendUrl = `https://${host}`
+        // Use the known frontend URL for Railway deployment
+        frontendUrl = 'https://mo-s-burrito-app-production.up.railway.app'
       } else if (process.env.NODE_ENV === 'production' && host) {
         // For other production deployments, use the same domain
         frontendUrl = `https://${host}`
@@ -328,6 +329,18 @@ app.post('/api/orders', async (req, res) => {
     console.log(`🔗 Frontend URL for Stripe: ${frontendUrl}`)
     console.log(`✅ Success URL will be: ${successUrl}`)
     console.log(`❌ Cancel URL will be: ${cancelUrl}`)
+    
+    // Validate URLs before sending to Stripe
+    try {
+      new URL(successUrl)
+      new URL(cancelUrl)
+    } catch (error) {
+      console.error('❌ Invalid URL constructed:', error.message)
+      return res.status(500).json({ 
+        error: 'Invalid URL configuration',
+        details: `Frontend URL: ${frontendUrl}, Success URL: ${successUrl}` 
+      })
+    }
 
     // Create Stripe checkout session
     const session = await stripe.checkout.sessions.create({
