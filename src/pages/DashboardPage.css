@@ -263,9 +263,13 @@
 }
 
 .order-item {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 8px;
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 1fr;
+  gap: 10px;
+  align-items: center;
+  padding: 12px 16px;
+  border-bottom: 1px solid #f0f0f0;
+  transition: background-color 0.2s ease;
 }
 
 .order-item:last-child {
@@ -277,6 +281,20 @@
   margin: 15px 0;
   font-size: 1.1rem;
   color: var(--primary-red);
+}
+
+.order-total {
+  font-weight: 600;
+  color: var(--primary-color);
+}
+
+.order-status {
+  font-weight: 500;
+  font-size: 0.9rem;
+  text-transform: capitalize;
+  padding: 4px 8px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.05);
 }
 
 /* Enhanced Cooking Timer */
@@ -2035,4 +2053,157 @@
 .clear-filter-btn:hover {
   background: #4CAF50;
   transform: translateY(-1px);
-} 
+}
+
+/* Clickable Customer Items */
+.customer-item.clickable {
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border: 2px solid transparent;
+}
+
+.customer-item.clickable:hover {
+  background: linear-gradient(135deg, #fff3e0, #ffe0b2);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+  border-color: var(--primary-color);
+}
+
+.customer-item.clickable:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Customer Modal */
+.customer-modal-content {
+  padding: 20px;
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+.customer-modal-content .customer-info {
+  background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+  padding: 20px;
+  border-radius: 12px;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.customer-modal-content .customer-info h3 {
+  margin: 0 0 10px 0;
+  color: var(--dark-brown);
+  font-size: 1.5rem;
+}
+
+.customer-modal-content .customer-info p {
+  margin: 5px 0;
+  color: var(--text-light);
+  font-size: 1rem;
+}
+
+.customer-orders h3 {
+  color: var(--dark-brown);
+  margin-bottom: 15px;
+  font-size: 1.3rem;
+}
+
+.loading-orders {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 40px;
+  color: var(--text-light);
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid var(--primary-color);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 15px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.orders-list {
+  max-height: 300px;
+  overflow-y: auto;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+}
+
+.orders-list .order-item {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 1fr;
+  gap: 10px;
+  align-items: center;
+  padding: 12px 16px;
+  border-bottom: 1px solid #f0f0f0;
+  transition: background-color 0.2s ease;
+}
+
+.orders-list .order-item:last-child {
+  border-bottom: none;
+}
+
+.orders-list .order-item:hover {
+  background-color: #f8f9fa;
+}
+
+.order-id {
+  font-weight: 600;
+  color: var(--dark-brown);
+}
+
+.order-date {
+  color: var(--text-light);
+  font-size: 0.9rem;
+}
+
+.order-total {
+  font-weight: 600;
+  color: var(--primary-color);
+}
+
+.empty-orders {
+  text-align: center;
+  padding: 40px;
+  color: var(--text-light);
+}
+
+.customer-actions {
+  margin-top: 20px;
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+}
+
+.btn-email {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px;
+  background: var(--primary-color);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.btn-email:hover {
+  background: var(--secondary-color);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.btn-email:active {
+  transform: translateY(0);
+}

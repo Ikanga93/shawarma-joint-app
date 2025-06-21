@@ -92,10 +92,8 @@ const DashboardPage = ({ onLogout }) => {
   // Modal states
   const [showMenuModal, setShowMenuModal] = useState(false)
   const [showLocationModal, setShowLocationModal] = useState(false)
-  const [showLiveLocationModal, setShowLiveLocationModal] = useState(false) // New modal state
-  const [editingMenuItem, setEditingMenuItem] = useState(null)
-  const [editingLocation, setEditingLocation] = useState(null)
-  const [editingLiveLocation, setEditingLiveLocation] = useState(null) // New editing state
+  const [showLiveLocationModal, setShowLiveLocationModal] = useState(false)
+  const [showCustomerModal, setShowCustomerModal] = useState(false)
 
   // Form states
   const [menuForm, setMenuForm] = useState({
@@ -103,24 +101,21 @@ const DashboardPage = ({ onLogout }) => {
     description: '',
     price: '',
     category: '',
-    emoji: '',
-    available: true,
+    is_available: true,
     image_url: '',
     imageFile: null
   })
-
+  
   const [locationForm, setLocationForm] = useState({
-    id: '',
     name: '',
-    type: 'mobile',
-    description: '',
-    current_location: '',
-    schedule: '',
+    address: '',
+    latitude: '',
+    longitude: '',
     phone: '',
-    status: 'active'
+    hours: '',
+    is_active: true
   })
-
-  // Live location form state (New functionality)
+  
   const [liveLocationForm, setLiveLocationForm] = useState({
     truck_name: '',
     current_address: '',
@@ -130,6 +125,14 @@ const DashboardPage = ({ onLogout }) => {
     hours_today: '',
     is_active: true
   })
+
+  // Editing states
+  const [editingMenuItem, setEditingMenuItem] = useState(null)
+  const [editingLocation, setEditingLocation] = useState(null)
+  const [editingLiveLocation, setEditingLiveLocation] = useState(null)
+  const [selectedCustomer, setSelectedCustomer] = useState(null)
+  const [customerOrders, setCustomerOrders] = useState([])
+  const [loadingCustomerOrders, setLoadingCustomerOrders] = useState(false)
 
   // Geolocation state
   const [isGettingLocation, setIsGettingLocation] = useState(false)
@@ -935,6 +938,57 @@ const DashboardPage = ({ onLogout }) => {
     }
   }
 
+  // Customer modal functions
+  const openCustomerModal = async (customer) => {
+    console.log('🔍 Opening customer modal for:', customer)
+    setSelectedCustomer(customer)
+    setShowCustomerModal(true)
+    setLoadingCustomerOrders(true)
+    
+    try {
+      // Load customer's order history
+      const customerKey = customer.email || customer.phone
+      const customerOrderHistory = orders.filter(order => 
+        order.customer_email === customerKey || order.customer_phone === customerKey
+      )
+      
+      // Sort orders by date (newest first)
+      const sortedOrders = customerOrderHistory.sort((a, b) => {
+        const dateA = new Date(a.order_time || a.order_date || a.orderTime)
+        const dateB = new Date(b.order_time || b.order_date || b.orderTime)
+        return dateB - dateA
+      })
+      
+      console.log('📋 Customer orders loaded:', sortedOrders.length)
+      setCustomerOrders(sortedOrders)
+    } catch (error) {
+      console.error('❌ Error loading customer orders:', error)
+      setCustomerOrders([])
+    } finally {
+      setLoadingCustomerOrders(false)
+    }
+  }
+
+  const closeCustomerModal = () => {
+    setShowCustomerModal(false)
+    setSelectedCustomer(null)
+    setCustomerOrders([])
+    setLoadingCustomerOrders(false)
+  }
+
+  const sendEmailToCustomer = (customerEmail) => {
+    if (!customerEmail) {
+      alert('No email address available for this customer')
+      return
+    }
+    
+    const subject = encodeURIComponent("Message from Mo's Burritos Restaurant")
+    const body = encodeURIComponent("Dear valued customer,\n\nThank you for choosing Mo's Burritos Restaurant!\n\nBest regards,\nMo's Burritos Team")
+    const mailtoLink = `mailto:${customerEmail}?subject=${subject}&body=${body}`
+    
+    window.open(mailtoLink, '_blank')
+  }
+
   const getStatusColor = (status) => {
     switch (status) {
       case 'pending_payment': return '#ff9800'
@@ -1593,7 +1647,12 @@ const DashboardPage = ({ onLogout }) => {
             <div className="customers-list">
               {customerAnalytics.topCustomers.length > 0 ? (
                 customerAnalytics.topCustomers.slice(0, 5).map((customer, index) => (
-                  <div key={index} className="customer-item">
+                  <div 
+                    key={index} 
+                    className="customer-item clickable" 
+                    onClick={() => openCustomerModal(customer)}
+                    title="Click to view customer details"
+                  >
                     <div className="customer-rank">#{index + 1}</div>
                     <div className="customer-info">
                       <div className="customer-name">{customer.name}</div>
@@ -2403,6 +2462,66 @@ const DashboardPage = ({ onLogout }) => {
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        )}
+
+        {/* Customer Modal */}
+        {showCustomerModal && (
+          <div className="modal-overlay" onClick={closeCustomerModal}>
+            <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+              <div className="modal-header">
+                <h3>Customer Details</h3>
+                <button className="modal-close" onClick={closeCustomerModal}>×</button>
+              </div>
+              
+              <div className="customer-modal-content">
+                <div className="customer-info">
+                  <h3>{selectedCustomer.name}</h3>
+                  <p>{selectedCustomer.email}</p>
+                  <p>{selectedCustomer.phone}</p>
+                </div>
+
+                <div className="customer-orders">
+                  <h3>Order History</h3>
+                  {loadingCustomerOrders ? (
+                    <div className="loading-orders">
+                      <div className="loading-spinner"></div>
+                      <p>Loading orders...</p>
+                    </div>
+                  ) : (
+                    <div className="orders-list">
+                      {customerOrders.length > 0 ? (
+                        customerOrders.map((order, index) => (
+                          <div key={index} className="order-item">
+                            <div className="order-id">#{order.id}</div>
+                            <div className="order-date">{new Date(order.order_time || order.order_date || order.orderTime).toLocaleDateString()}</div>
+                            <div className="order-total">${(parseFloat(order.total_amount) || 0).toFixed(2)}</div>
+                            <div className="order-status" style={{ color: getStatusColor(order.status) }}>
+                              {order.status}
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="empty-orders">
+                          <p>No orders found for this customer.</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                <div className="customer-actions">
+                  <button 
+                    type="button" 
+                    className="btn-email"
+                    onClick={() => sendEmailToCustomer(selectedCustomer.email)}
+                  >
+                    <Mail size={16} />
+                    Send Email
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         )}
