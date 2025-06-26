@@ -25,6 +25,7 @@ import OrderConfirmation from './pages/OrderConfirmation'
 import OrderSuccessPage from './pages/OrderSuccessPage'
 import Checkout from './pages/Checkout'
 import NotFound from './pages/NotFound'
+import { clearStorageCache } from './utils/storageUtils'
 
 // Component to conditionally render customer layout
 const AppContent = () => {
@@ -53,6 +54,38 @@ const AppContent = () => {
   const handleCartClose = () => {
     setIsCartOpen(false)
   }
+
+  // Add global error handler for storage quota errors
+  useEffect(() => {
+    const handleStorageError = (event) => {
+      if (event.error && event.error.name === 'QuotaExceededError') {
+        console.warn('Storage quota exceeded, clearing cache...')
+        clearStorageCache()
+        
+        // Show user-friendly notification
+        if (window.confirm('Storage is full. Would you like to clear cached data to continue? (This won\'t affect your cart or login status)')) {
+          clearStorageCache()
+          window.location.reload()
+        }
+      }
+    }
+
+    // Listen for unhandled promise rejections that might be storage-related
+    const handleUnhandledRejection = (event) => {
+      if (event.reason && event.reason.name === 'QuotaExceededError') {
+        console.warn('Storage quota exceeded in promise, clearing cache...')
+        clearStorageCache()
+      }
+    }
+
+    window.addEventListener('error', handleStorageError)
+    window.addEventListener('unhandledrejection', handleUnhandledRejection)
+
+    return () => {
+      window.removeEventListener('error', handleStorageError)
+      window.removeEventListener('unhandledrejection', handleUnhandledRejection)
+    }
+  }, [])
 
   return (
       <div className="App">
