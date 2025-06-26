@@ -4,7 +4,6 @@ import { Link } from 'react-router-dom'
 import { useCart } from '../context/CartContext'
 import ApiService from '../services/ApiService'
 import API_BASE_URL from '../config/api.js'
-import { safeSessionStorageSet, safeSessionStorageGet } from '../utils/storageUtils'
 import './MenuPage.css'
 
 const MenuPage = () => {
@@ -22,14 +21,15 @@ const MenuPage = () => {
         setError(null)
         
         // Check if we have cached menu items
-        const cachedItems = safeSessionStorageGet('menuItems')
-        const cacheTimestamp = safeSessionStorageGet('menuItemsTimestamp')
+        const cachedItems = sessionStorage.getItem('menuItems')
+        const cacheTimestamp = sessionStorage.getItem('menuItemsTimestamp')
         const now = Date.now()
         const cacheExpiry = 5 * 60 * 1000 // 5 minutes
         
         if (cachedItems && cacheTimestamp && (now - parseInt(cacheTimestamp)) < cacheExpiry) {
           console.log('Loading menu items from cache (MenuPage)')
-          const availableItems = cachedItems.filter(item => item.available)
+          const items = JSON.parse(cachedItems)
+          const availableItems = items.filter(item => item.available)
           setMenuItems(availableItems)
           setIsLoading(false)
           return
@@ -38,9 +38,9 @@ const MenuPage = () => {
         console.log('Fetching menu items from API (MenuPage)')
         const items = await ApiService.getMenuItems()
         
-        // Cache the results (without base64 images to save space)
-        safeSessionStorageSet('menuItems', items)
-        safeSessionStorageSet('menuItemsTimestamp', now.toString())
+        // Cache the results
+        sessionStorage.setItem('menuItems', JSON.stringify(items))
+        sessionStorage.setItem('menuItemsTimestamp', now.toString())
         
         // Filter only available items
         const availableItems = items.filter(item => item.available)
@@ -50,11 +50,12 @@ const MenuPage = () => {
         setError('Failed to load menu items')
         
         // Try to load from cache even if expired as fallback
-        const cachedItems = safeSessionStorageGet('menuItems')
+        const cachedItems = sessionStorage.getItem('menuItems')
         if (cachedItems) {
           console.log('Loading expired cache as fallback (MenuPage)')
           try {
-            const availableItems = cachedItems.filter(item => item.available)
+            const items = JSON.parse(cachedItems)
+            const availableItems = items.filter(item => item.available)
             setMenuItems(availableItems)
           } catch (cacheError) {
             console.error('Cache fallback failed:', cacheError)

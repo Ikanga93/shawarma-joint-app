@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react'
 import ApiService from '../services/ApiService'
-import { safeLocalStorageSet, safeLocalStorageGet } from '../utils/storageUtils'
+import API_BASE_URL from '../config/api.js'
 
 const CartContext = createContext()
 
@@ -16,29 +16,26 @@ export const CartProvider = ({ children }) => {
   const [cartItems, setCartItems] = useState([])
   const [isLoaded, setIsLoaded] = useState(false)
 
-  // Load cart from localStorage on component mount
+  // Load cart from localStorage on mount
   useEffect(() => {
-    const loadCart = async () => {
+    const savedCart = localStorage.getItem('cart')
+    console.log('Loading cart from localStorage:', savedCart)
+    if (savedCart) {
       try {
-        const savedCart = safeLocalStorageGet('cart')
-        if (savedCart && Array.isArray(savedCart)) {
-          console.log('Loading cart from localStorage:', savedCart)
-          // Restore cart items with images from API
-          await restoreCartItemsWithImages(savedCart)
-        } else {
-          console.log('No cart found in localStorage')
-          setIsLoaded(true)
-        }
+        const parsedCart = JSON.parse(savedCart)
+        console.log('Parsed cart:', parsedCart)
+        // Restore image URLs by fetching menu items and matching them
+        restoreCartItemsWithImages(parsedCart)
       } catch (error) {
         console.error('Error loading cart from localStorage:', error)
         setIsLoaded(true)
       }
+    } else {
+      setIsLoaded(true)
     }
-    
-    loadCart()
   }, [])
 
-  // Helper function to restore cart items with images from API
+  // Restore cart items with images from menu data
   const restoreCartItemsWithImages = async (cartItems) => {
     try {
       const menuItems = await ApiService.getMenuItems()
@@ -72,8 +69,34 @@ export const CartProvider = ({ children }) => {
   useEffect(() => {
     if (isLoaded) {
       console.log('Saving cart to localStorage:', cartItems)
-      // Use the safe storage utility which automatically handles base64 images
-      safeLocalStorageSet('cart', cartItems)
+      try {
+        // Only save essential data to localStorage to prevent quota issues
+        // Keep image_url as just the filename/path, not full data URLs
+        const cartItemsForStorage = cartItems.map(item => {
+          const { ...itemData } = item;
+          // If image_url is a data URL, don't save it to localStorage
+          if (itemData.image_url && itemData.image_url.startsWith('data:')) {
+            delete itemData.image_url;
+          }
+          return itemData;
+        });
+        localStorage.setItem('cart', JSON.stringify(cartItemsForStorage))
+      } catch (error) {
+        console.error('Error saving cart to localStorage:', error)
+        // If localStorage is full, try to clear it and save again
+        if (error.name === 'QuotaExceededError') {
+          try {
+            localStorage.removeItem('cart')
+            const cartItemsForStorage = cartItems.map(item => {
+              const { image_url, ...itemWithoutImage } = item;
+              return itemWithoutImage;
+            });
+            localStorage.setItem('cart', JSON.stringify(cartItemsForStorage))
+          } catch (secondError) {
+            console.error('Failed to save cart even after clearing localStorage:', secondError)
+          }
+        }
+      }
     }
   }, [cartItems, isLoaded])
 
