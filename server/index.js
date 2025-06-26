@@ -2145,3 +2145,301 @@ server.listen(PORT, HOST, () => {
     process.exit(1)
   }
 }) 
+
+// Delete specific customer and all related data (admin only)
+app.delete('/api/admin/customers/:customerId', authenticateToken, authorizeRole(['admin']), async (req, res) => {
+  try {
+    const { customerId } = req.params
+    const { confirmPassword } = req.body
+
+    // Additional security check - require password confirmation for customer deletion
+    if (!confirmPassword) {
+      return res.status(400).json({ error: 'Password confirmation required for customer deletion' })
+    }
+
+    // Verify admin password
+    const admin = await queryOne('SELECT * FROM users WHERE id = ?', [req.user.id])
+    if (!admin) {
+      return res.status(404).json({ error: 'Admin user not found' })
+    }
+
+    const isValidPassword = await bcrypt.compare(confirmPassword, admin.password_hash)
+    if (!isValidPassword) {
+      return res.status(401).json({ error: 'Invalid password confirmation' })
+    }
+
+    // Check if customer exists and get their info
+    let customer = null
+    let isRegisteredCustomer = false
+
+    // First check if it's a registered customer (has user account)
+    if (!customerId.startsWith('guest-')) {
+      customer = await queryOne('SELECT * FROM users WHERE id = ? AND role = ?', [customerId, 'customer'])
+      if (customer) {
+        isRegisteredCustomer = true
+      }
+    }
+
+    // If not found as registered customer, check if it's a guest customer from orders
+    if (!customer) {
+      // Extract guest customer identifier
+      const guestId = customerId.replace('guest-', '')
+      
+      // Try to find guest customer by phone, email, or name
+      const guestOrder = await queryOne(`
+        SELECT DISTINCT customer_name, customer_phone, customer_email 
+        FROM orders 
+        WHERE (user_id IS NULL OR user_id = '') 
+        AND (customer_phone = ? OR customer_email = ? OR customer_name = ?)
+        LIMIT 1
+      `, [guestId, guestId, guestId])
+      
+      if (guestOrder) {
+        customer = {
+          id: customerId,
+          customer_name: guestOrder.customer_name,
+          customer_phone: guestOrder.customer_phone,
+          customer_email: guestOrder.customer_email,
+          isGuest: true
+        }
+      }
+    }
+
+    if (!customer) {
+      return res.status(404).json({ error: 'Customer not found' })
+    }
+
+    let deletedCounts = {
+      orderStatusHistory: 0,
+      orders: 0,
+      authTokens: 0,
+      customerProfiles: 0,
+      userLocations: 0,
+      users: 0
+    }
+
+    console.log(`🗑️ Starting customer deletion requested by admin: ${req.user.email}`)
+    console.log(`👤 Customer to delete: ${isRegisteredCustomer ? customer.email : customer.customer_name} (${isRegisteredCustomer ? 'Registered' : 'Guest'})`)
+
+    if (isRegisteredCustomer) {
+      // Delete registered customer and all related data
+
+      // Step 1: Delete order status history for customer's orders
+      const result1 = await query(`
+        DELETE FROM order_status_history 
+        WHERE order_id IN (
+          SELECT id FROM orders WHERE user_id = ?
+        )
+      `, [customerId])
+      deletedCounts.orderStatusHistory = result1.changes || 0
+
+      // Step 2: Delete customer's orders
+      const result2 = await query('DELETE FROM orders WHERE user_id = ?', [customerId])
+      deletedCounts.orders = result2.changes || 0
+
+      // Step 3: Delete customer's auth tokens
+      const result3 = await query('DELETE FROM auth_tokens WHERE user_id = ?', [customerId])
+      deletedCounts.authTokens = result3.changes || 0
+
+      // Step 4: Delete customer profile
+      const result4 = await query('DELETE FROM customer_profiles WHERE user_id = ?', [customerId])
+      deletedCounts.customerProfiles = result4.changes || 0
+
+      // Step 5: Delete user location assignments
+      const result5 = await query('DELETE FROM user_locations WHERE user_id = ?', [customerId])
+      deletedCounts.userLocations = result5.changes || 0
+
+      // Step 6: Finally delete the user account
+      const result6 = await query('DELETE FROM users WHERE id = ?', [customerId])
+      deletedCounts.users = result6.changes || 0
+
+    } else {
+      // Delete guest customer data (orders only)
+      const guestId = customerId.replace('guest-', '')
+      
+      // Step 1: Delete order status history for guest customer's orders
+      const result1 = await query(`
+        DELETE FROM order_status_history 
+        WHERE order_id IN (
+          SELECT id FROM orders 
+          WHERE (user_id IS NULL OR user_id = '') 
+          AND (customer_phone = ? OR customer_email = ? OR customer_name = ?)
+        )
+      `, [guestId, guestId, guestId])
+      deletedCounts.orderStatusHistory = result1.changes || 0
+
+      // Step 2: Delete guest customer's orders
+      const result2 = await query(`
+        DELETE FROM orders 
+        WHERE (user_id IS NULL OR user_id = '') 
+        AND (customer_phone = ? OR customer_email = ? OR customer_name = ?)
+      `, [guestId, guestId, guestId])
+      deletedCounts.orders = result2.changes || 0
+    }
+
+    // Emit customer deletion event to all connected clients
+    io.emit('customerDeleted', {
+      customerId: customerId,
+      customerType: isRegisteredCustomer ? 'registered' : 'guest',
+      customerName: isRegisteredCustomer ? `${customer.first_name} ${customer.last_name}` : customer.customer_name,
+      deletedCounts,
+      timestamp: new Date().toISOString(),
+      deletedBy: req.user.email
+    })
+
+    console.log(`✅ Customer deletion completed successfully`)
+    console.log(`📊 Deleted:`, deletedCounts)
+
+    res.json({
+      success: true,
+      message: 'Customer and all related data deleted successfully',
+      customer: {
+        id: customerId,
+        name: isRegisteredCustomer ? `${customer.first_name} ${customer.last_name}` : customer.customer_name,
+        type: isRegisteredCustomer ? 'registered' : 'guest'
+      },
+      deletedCounts,
+      timestamp: new Date().toISOString(),
+      deletedBy: req.user.email
+    })
+
+  } catch (error) {
+    console.error('❌ Error deleting customer:', error)
+    res.status(500).json({ 
+      error: 'Customer deletion failed', 
+      details: error.message,
+      message: 'The customer deletion operation failed. Please check the server logs and try again.'
+    })
+  }
+})
+
+// Get customer deletion preview (admin only) - shows what would be deleted
+app.get('/api/admin/customers/:customerId/deletion-preview', authenticateToken, authorizeRole(['admin']), async (req, res) => {
+  try {
+    const { customerId } = req.params
+
+    // Check if customer exists and get their info
+    let customer = null
+    let isRegisteredCustomer = false
+    let previewCounts = {
+      orderStatusHistory: 0,
+      orders: 0,
+      authTokens: 0,
+      customerProfiles: 0,
+      userLocations: 0,
+      users: 0
+    }
+
+    // First check if it's a registered customer
+    if (!customerId.startsWith('guest-')) {
+      customer = await queryOne('SELECT * FROM users WHERE id = ? AND role = ?', [customerId, 'customer'])
+      if (customer) {
+        isRegisteredCustomer = true
+
+        // Count related data for registered customer
+        const orderStatusCount = await queryOne(`
+          SELECT COUNT(*) as count FROM order_status_history 
+          WHERE order_id IN (SELECT id FROM orders WHERE user_id = ?)
+        `, [customerId])
+        previewCounts.orderStatusHistory = orderStatusCount.count
+
+        const ordersCount = await queryOne('SELECT COUNT(*) as count FROM orders WHERE user_id = ?', [customerId])
+        previewCounts.orders = ordersCount.count
+
+        const authTokensCount = await queryOne('SELECT COUNT(*) as count FROM auth_tokens WHERE user_id = ?', [customerId])
+        previewCounts.authTokens = authTokensCount.count
+
+        const customerProfilesCount = await queryOne('SELECT COUNT(*) as count FROM customer_profiles WHERE user_id = ?', [customerId])
+        previewCounts.customerProfiles = customerProfilesCount.count
+
+        const userLocationsCount = await queryOne('SELECT COUNT(*) as count FROM user_locations WHERE user_id = ?', [customerId])
+        previewCounts.userLocations = userLocationsCount.count
+
+        previewCounts.users = 1 // The user account itself
+      }
+    }
+
+    // If not found as registered customer, check if it's a guest customer
+    if (!customer) {
+      const guestId = customerId.replace('guest-', '')
+      
+      const guestOrder = await queryOne(`
+        SELECT DISTINCT customer_name, customer_phone, customer_email 
+        FROM orders 
+        WHERE (user_id IS NULL OR user_id = '') 
+        AND (customer_phone = ? OR customer_email = ? OR customer_name = ?)
+        LIMIT 1
+      `, [guestId, guestId, guestId])
+      
+      if (guestOrder) {
+        customer = {
+          id: customerId,
+          customer_name: guestOrder.customer_name,
+          customer_phone: guestOrder.customer_phone,
+          customer_email: guestOrder.customer_email,
+          isGuest: true
+        }
+
+        // Count guest customer's orders
+        const orderStatusCount = await queryOne(`
+          SELECT COUNT(*) as count FROM order_status_history 
+          WHERE order_id IN (
+            SELECT id FROM orders 
+            WHERE (user_id IS NULL OR user_id = '') 
+            AND (customer_phone = ? OR customer_email = ? OR customer_name = ?)
+          )
+        `, [guestId, guestId, guestId])
+        previewCounts.orderStatusHistory = orderStatusCount.count
+
+        const ordersCount = await queryOne(`
+          SELECT COUNT(*) as count FROM orders 
+          WHERE (user_id IS NULL OR user_id = '') 
+          AND (customer_phone = ? OR customer_email = ? OR customer_name = ?)
+        `, [guestId, guestId, guestId])
+        previewCounts.orders = ordersCount.count
+      }
+    }
+
+    if (!customer) {
+      return res.status(404).json({ error: 'Customer not found' })
+    }
+
+    // Get sample orders for preview
+    let sampleOrders = []
+    if (isRegisteredCustomer) {
+      sampleOrders = await queryAll(`
+        SELECT id, customer_name, total_amount, status, order_date 
+        FROM orders WHERE user_id = ? 
+        ORDER BY order_date DESC LIMIT 5
+      `, [customerId])
+    } else {
+      const guestId = customerId.replace('guest-', '')
+      sampleOrders = await queryAll(`
+        SELECT id, customer_name, total_amount, status, order_date 
+        FROM orders 
+        WHERE (user_id IS NULL OR user_id = '') 
+        AND (customer_phone = ? OR customer_email = ? OR customer_name = ?)
+        ORDER BY order_date DESC LIMIT 5
+      `, [guestId, guestId, guestId])
+    }
+
+    res.json({
+      customer: {
+        id: customerId,
+        name: isRegisteredCustomer ? `${customer.first_name} ${customer.last_name}` : customer.customer_name,
+        email: isRegisteredCustomer ? customer.email : customer.customer_email,
+        phone: isRegisteredCustomer ? customer.phone : customer.customer_phone,
+        type: isRegisteredCustomer ? 'registered' : 'guest',
+        createdAt: isRegisteredCustomer ? customer.created_at : null
+      },
+      previewCounts,
+      sampleOrders,
+      warning: 'This operation is irreversible. The customer and all their related data will be permanently deleted.',
+      timestamp: new Date().toISOString()
+    })
+
+  } catch (error) {
+    console.error('Error generating customer deletion preview:', error)
+    res.status(500).json({ error: 'Failed to generate customer deletion preview' })
+  }
+}) 

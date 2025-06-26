@@ -42,7 +42,9 @@ import {
   Package,
   X,
   ChefHat,
-  BarChart3
+  BarChart3,
+  ShoppingCart,
+  AlertTriangle
 } from 'lucide-react'
 import { useBusinessConfig } from '../context/BusinessContext'
 import DashboardHeader from '../components/DashboardHeader'
@@ -101,6 +103,12 @@ const DashboardPage = ({ onLogout }) => {
     averageOrderValue: 0,
     totalRevenue: 0
   })
+
+  // Customer deletion state
+  const [showDeleteCustomerModal, setShowDeleteCustomerModal] = useState(false)
+  const [customerToDelete, setCustomerToDelete] = useState(null)
+  const [deleteConfirmPassword, setDeleteConfirmPassword] = useState('')
+  const [isDeletingCustomer, setIsDeletingCustomer] = useState(false)
 
   // Order Management state
   const [selectedOrderStatus, setSelectedOrderStatus] = useState('all')
@@ -2645,6 +2653,13 @@ const DashboardPage = ({ onLogout }) => {
                               <Mail size={14} />
                             </button>
                           )}
+                          <button 
+                            className="btn-delete-mini"
+                            onClick={(e) => handleDeleteCustomer(customer, e)}
+                            title="Delete Customer"
+                          >
+                            <Trash2 size={14} />
+                          </button>
                         </div>
                       </div>
                     </div>
@@ -2720,6 +2735,13 @@ const DashboardPage = ({ onLogout }) => {
                             <Mail size={14} />
                           </button>
                         )}
+                        <button 
+                          className="btn-delete-mini"
+                          onClick={(e) => handleDeleteCustomer(customer, e)}
+                          title="Delete Customer"
+                        >
+                          <Trash2 size={14} />
+                        </button>
                       </div>
                     </div>
                   )
@@ -3091,6 +3113,83 @@ const DashboardPage = ({ onLogout }) => {
     
     const years = Math.floor(diffMonths / 12)
     return years === 1 ? '1 year ago' : `${years} years ago`
+  }
+
+  // Customer deletion functions
+  const handleDeleteCustomer = (customer, event) => {
+    event.stopPropagation() // Prevent opening customer detail modal
+    setCustomerToDelete(customer)
+    setShowDeleteCustomerModal(true)
+    setDeleteConfirmPassword('')
+  }
+
+  const confirmDeleteCustomer = async () => {
+    if (!deleteConfirmPassword.trim()) {
+      alert('Please enter your password to confirm deletion')
+      return
+    }
+
+    if (!customerToDelete) return
+
+    try {
+      setIsDeletingCustomer(true)
+      
+      const response = await fetch(`/api/admin/customers/${customerToDelete.id}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
+        },
+        body: JSON.stringify({
+          confirmPassword: deleteConfirmPassword
+        })
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to delete customer')
+      }
+
+      // Remove customer from local state
+      setCustomers(prevCustomers => 
+        prevCustomers.filter(c => c.id !== customerToDelete.id)
+      )
+
+      // Remove customer's orders from orders state
+      setOrders(prevOrders => 
+        prevOrders.filter(order => 
+          customerToDelete.isRegistered 
+            ? order.user_id !== customerToDelete.id
+            : !(order.customer_phone === customerToDelete.phone || 
+                order.customer_email === customerToDelete.email ||
+                order.customer_name === customerToDelete.name)
+        )
+      )
+
+      console.log(`✅ Customer ${customerToDelete.name} deleted successfully`)
+      alert(`Customer ${customerToDelete.name} and all related data deleted successfully`)
+      
+      // Close modal
+      setShowDeleteCustomerModal(false)
+      setCustomerToDelete(null)
+      setDeleteConfirmPassword('')
+
+      // Refresh analytics
+      await loadCustomers()
+
+    } catch (error) {
+      console.error('❌ Error deleting customer:', error)
+      alert(`Failed to delete customer: ${error.message}`)
+    } finally {
+      setIsDeletingCustomer(false)
+    }
+  }
+
+  const cancelDeleteCustomer = () => {
+    setShowDeleteCustomerModal(false)
+    setCustomerToDelete(null)
+    setDeleteConfirmPassword('')
   }
 
   // Show loading screen while initializing
@@ -4018,7 +4117,104 @@ const DashboardPage = ({ onLogout }) => {
                         Win Back
                       </button>
                     )}
+                    <button 
+                      className="btn-action btn-delete"
+                      onClick={(e) => handleDeleteCustomer(selectedCustomer, e)}
+                      title="Delete customer permanently"
+                    >
+                      <Trash2 size={16} />
+                      Delete Customer
+                    </button>
                   </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Customer Deletion Confirmation Modal */}
+        {showDeleteCustomerModal && customerToDelete && (
+          <div className="modal-overlay" onClick={cancelDeleteCustomer}>
+            <div className="modal-content delete-customer-modal" onClick={(e) => e.stopPropagation()}>
+              <div className="modal-header">
+                <h3>
+                  <AlertTriangle size={24} color="#ff6b35" />
+                  Delete Customer
+                </h3>
+                <button className="modal-close" onClick={cancelDeleteCustomer}>×</button>
+              </div>
+              
+              <div className="delete-customer-content">
+                <div className="warning-section">
+                  <div className="warning-icon">
+                    <AlertTriangle size={48} color="#ff6b35" />
+                  </div>
+                  <div className="warning-text">
+                    <h4>⚠️ This action cannot be undone!</h4>
+                    <p>You are about to permanently delete:</p>
+                    <div className="customer-to-delete">
+                      <h5>{customerToDelete.name}</h5>
+                      <p>{customerToDelete.email || customerToDelete.phone}</p>
+                      <p className="customer-type">
+                        {customerToDelete.isRegistered ? '👤 Registered Customer' : '👥 Guest Customer'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="deletion-impact">
+                  <h4>📊 What will be deleted:</h4>
+                  <ul>
+                    <li>✓ Customer profile and account</li>
+                    <li>✓ All order history ({customerToDelete.totalOrders} orders)</li>
+                    <li>✓ Order status tracking records</li>
+                    {customerToDelete.isRegistered && (
+                      <>
+                        <li>✓ Login credentials and tokens</li>
+                        <li>✓ Customer preferences and settings</li>
+                      </>
+                    )}
+                    <li>✓ Total revenue impact: ${customerToDelete.totalSpent?.toFixed(2) || '0.00'}</li>
+                  </ul>
+                </div>
+
+                <div className="password-confirmation">
+                  <h4>🔒 Confirm with your admin password:</h4>
+                  <input
+                    type="password"
+                    placeholder="Enter your admin password"
+                    value={deleteConfirmPassword}
+                    onChange={(e) => setDeleteConfirmPassword(e.target.value)}
+                    className="password-input"
+                    disabled={isDeletingCustomer}
+                  />
+                </div>
+
+                <div className="modal-actions">
+                  <button 
+                    className="btn-cancel"
+                    onClick={cancelDeleteCustomer}
+                    disabled={isDeletingCustomer}
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    className="btn-delete-confirm"
+                    onClick={confirmDeleteCustomer}
+                    disabled={isDeletingCustomer || !deleteConfirmPassword.trim()}
+                  >
+                    {isDeletingCustomer ? (
+                      <>
+                        <div className="loading-spinner-small"></div>
+                        Deleting...
+                      </>
+                    ) : (
+                      <>
+                        <Trash2 size={16} />
+                        Delete Permanently
+                      </>
+                    )}
+                  </button>
                 </div>
               </div>
             </div>
