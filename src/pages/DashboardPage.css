@@ -1975,6 +1975,30 @@
   background: #d32f2f;
 }
 
+.btn-action.reset {
+  background: #ff9800;
+  color: white;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.btn-action.reset:hover {
+  background: #f57c00;
+}
+
+.btn-action.delete {
+  background: #f44336;
+  color: white;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.btn-action.delete:hover {
+  background: #d32f2f;
+}
+
 /* Responsive Design for Analytics and Order Management */
 @media (max-width: 1024px) {
   .analytics-row {
@@ -2206,4 +2230,150 @@
 
 .btn-email:active {
   transform: translateY(0);
+}
+
+.customer-modal-content .customer-stats {
+  margin-top: 15px;
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.5);
+  border-radius: 8px;
+}
+
+.customer-modal-content .customer-stats p {
+  margin: 5px 0;
+  color: var(--dark-brown);
+  font-size: 0.95rem;
+}
+
+.no-email-notice {
+  margin-top: 10px;
+  padding: 10px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  color: var(--text-light);
+  font-size: 0.9rem;
+}
+
+.customer-modal-content .customer-info p {
+  margin: 5px 0;
+  color: var(--text-light);
+  font-size: 1rem;
+}
+
+.customer-modal-content .customer-stats {
+  margin-top: 15px;
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.5);
+  border-radius: 8px;
+}
+
+.order-actions-mini {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.order-actions-mini .btn-action {
+  font-size: 11px;
+  padding: 4px 8px;
+  min-width: auto;
+}
+
+.customer-item {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  padding: 15px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+  margin-bottom: 12px;
+}
+
+.customer-item.clickable {
+  cursor: pointer;
+}
+
+.customer-item.clickable:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  background: #f8f9fa;
+}
+
+.customer-actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+}
+
+.btn-email-mini {
+  background: #007bff;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 12px;
+}
+
+.btn-email-mini:hover {
+  background: #0056b3;
+  transform: scale(1.1);
+}
+
+.no-email-mini {
+  opacity: 0.3;
+  font-size: 14px;
+  cursor: not-allowed;
+}
+
+/* Dashboard Location Bar */
+.dashboard-location-bar {
+  background: white;
+  border-bottom: 1px solid var(--border-color);
+  padding: 15px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.location-filter-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.location-filter-controls label {
+  font-weight: 500;
+  color: var(--text-dark);
+  font-size: 0.9rem;
+}
+
+.location-filter-select {
+  padding: 8px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background: white;
+  font-size: 0.9rem;
+  color: var(--text-dark);
+  cursor: pointer;
+  transition: border-color 0.2s ease;
+}
+
+.location-filter-select:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 2px rgba(139, 69, 19, 0.1);
+}
+
+.location-filter-select:hover {
+  border-color: var(--primary-color);
 }

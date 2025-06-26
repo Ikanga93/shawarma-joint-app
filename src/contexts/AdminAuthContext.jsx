@@ -131,7 +131,15 @@ export const AdminAuthProvider = ({ children }) => {
       // Store admin tokens
       localStorage.setItem('adminAccessToken', data.accessToken)
       localStorage.setItem('adminRefreshToken', data.refreshToken)
-      setUser(data.user)
+      
+      // Store user information with location data
+      const userInfo = {
+        ...data.user,
+        assignedLocations: data.assignedLocations || [],
+        currentLocation: data.currentLocation || null
+      }
+      localStorage.setItem('currentUser', JSON.stringify(userInfo))
+      setUser(userInfo)
 
       return data
     } catch (error) {
@@ -165,7 +173,15 @@ export const AdminAuthProvider = ({ children }) => {
       // Store admin tokens
       localStorage.setItem('adminAccessToken', data.accessToken)
       localStorage.setItem('adminRefreshToken', data.refreshToken)
-      setUser(data.user)
+      
+      // Store user information with location data
+      const userInfo = {
+        ...data.user,
+        assignedLocations: data.assignedLocations || [],
+        currentLocation: data.currentLocation || null
+      }
+      localStorage.setItem('currentUser', JSON.stringify(userInfo))
+      setUser(userInfo)
 
       return data
     } catch (error) {
@@ -193,6 +209,7 @@ export const AdminAuthProvider = ({ children }) => {
       // Clear admin storage and state regardless of API call success
       localStorage.removeItem('adminAccessToken')
       localStorage.removeItem('adminRefreshToken')
+      localStorage.removeItem('currentUser')
       setUser(null)
     }
   }

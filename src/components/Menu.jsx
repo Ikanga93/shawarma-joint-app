@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { ShoppingCart, Plus, Minus, ChevronDown, ChevronUp } from 'lucide-react'
 import { useCart } from '../context/CartContext'
 import ApiService from '../services/ApiService'
@@ -20,55 +20,36 @@ const Menu = () => {
   const loadMenuItems = async () => {
     try {
       setLoading(true)
+      setError(null)
+      
+      // Check if we have cached menu items
+      const cachedItems = sessionStorage.getItem('menuItems')
+      const cacheTimestamp = sessionStorage.getItem('menuItemsTimestamp')
+      const now = Date.now()
+      const cacheExpiry = 5 * 60 * 1000 // 5 minutes
+      
+      if (cachedItems && cacheTimestamp && (now - parseInt(cacheTimestamp)) < cacheExpiry) {
+        console.log('Loading menu items from cache')
+        const data = JSON.parse(cachedItems)
+        setMenuItems(data.filter(item => item.available))
+        setLoading(false)
+        return
+      }
+      
+      console.log('Fetching menu items from API')
       const data = await ApiService.getMenuItems()
       
+      // Cache the results
+      sessionStorage.setItem('menuItems', JSON.stringify(data))
+      sessionStorage.setItem('menuItemsTimestamp', now.toString())
+      
       // Process menu items to add options structure if not present
-      // This is temporary until the backend API is updated to include options
       const processedData = data.map(item => {
-        // If the item already has options defined, use those
-        if (item.options && Array.isArray(item.options)) {
-          return item;
-        }
+        // Add default options for certain categories if not present
+        let defaultOptions = [];
         
-        // Otherwise, add default options based on item type/category
-        // This is just an example - in a real app, options would come from the API
-        const defaultOptions = [];
-        
-        // Add meat choice option for burgers
-        if (item.category === 'Burgers' || item.name.toLowerCase().includes('burger')) {
-          defaultOptions.push({
-            id: `${item.id}-patty`,
-            name: 'Patty Type',
-            description: 'Choose your preferred patty',
-            required: true,
-            multiSelect: false,
-            choices: [
-              { id: 'beef', name: 'Beef', price: 0 },
-              { id: 'chicken', name: 'Chicken', price: 0 },
-              { id: 'veggie', name: 'Veggie', price: 0 }
-            ]
-          });
-        }
-        
-        // Add protein choice for tacos
-        if (item.category === 'Mexican' || item.name.toLowerCase().includes('taco')) {
-          defaultOptions.push({
-            id: `${item.id}-protein`,
-            name: 'Protein',
-            description: 'Choose your protein',
-            required: true,
-            multiSelect: false,
-            choices: [
-              { id: 'chicken', name: 'Grilled Chicken', price: 0 },
-              { id: 'beef', name: 'Ground Beef', price: 0 },
-              { id: 'carnitas', name: 'Carnitas', price: 1.00 }
-            ]
-          });
-        }
-        
-        // Add size options for drinks
-        if (item.category === 'Drinks' || item.name.toLowerCase().includes('drink') || 
-            item.name.toLowerCase().includes('soda') || item.name.toLowerCase().includes('coffee')) {
+        // Add size options for main items
+        if (['Burritos', 'Tacos', 'Quesadillas'].includes(item.category) && (!item.options || item.options.length === 0)) {
           defaultOptions.push({
             id: `${item.id}-size`,
             name: 'Size',
@@ -90,22 +71,36 @@ const Menu = () => {
       });
       
       setMenuItems(processedData.filter(item => item.available));
-      setLoading(false);
     } catch (err) {
       console.error('Error loading menu items:', err)
       setError('Failed to load menu items. Please try again later.')
+      
+      // Try to load from cache even if expired as fallback
+      const cachedItems = sessionStorage.getItem('menuItems')
+      if (cachedItems) {
+        console.log('Loading expired cache as fallback')
+        try {
+          const data = JSON.parse(cachedItems)
+          setMenuItems(data.filter(item => item.available))
+        } catch (cacheError) {
+          console.error('Cache fallback failed:', cacheError)
+        }
+      }
+    } finally {
       setLoading(false)
     }
   }
 
-  // Group items by category
-  const groupedItems = menuItems.reduce((acc, item) => {
-    if (!acc[item.category]) {
-      acc[item.category] = []
-    }
-    acc[item.category].push(item)
-    return acc
-  }, {})
+  // Memoize grouped items to prevent recalculation
+  const groupedItems = useMemo(() => {
+    return menuItems.reduce((acc, item) => {
+      if (!acc[item.category]) {
+        acc[item.category] = []
+      }
+      acc[item.category].push(item)
+      return acc
+    }, {})
+  }, [menuItems])
 
   // Toggle item options visibility
   const toggleItemOptions = (itemId) => {
@@ -222,6 +217,7 @@ const Menu = () => {
         <div className="container">
           <h2>Most Liked</h2>
           <div className="loading-state">
+            <div className="loading-spinner"></div>
             <p>Loading delicious menu items...</p>
           </div>
         </div>

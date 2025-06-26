@@ -1,7 +1,8 @@
 import React, { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAdminAuth } from '../contexts/AdminAuthContext'
-import { Shield, Lock, User, Mail, Phone, UserPlus } from 'lucide-react'
+import { Shield, Lock, User, Mail, Phone, Eye, EyeOff, UserPlus } from 'lucide-react'
+import './AdminAuth.css'
 
 const AdminRegisterPage = () => {
   const navigate = useNavigate()
@@ -10,10 +11,14 @@ const AdminRegisterPage = () => {
     email: '',
     phone: '',
     password: '',
+    confirmPassword: '',
     fullName: ''
   })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  const [passwordStrength, setPasswordStrength] = useState({ level: 0, text: 'Weak' })
 
   const handleChange = (e) => {
     const { name, value } = e.target
@@ -21,11 +26,55 @@ const AdminRegisterPage = () => {
       ...prev,
       [name]: value
     }))
+
+    // Check password strength
+    if (name === 'password') {
+      const strength = calculatePasswordStrength(value)
+      setPasswordStrength({ level: strength, text: getPasswordStrengthText(strength) })
+    }
+  }
+
+  const calculatePasswordStrength = (password) => {
+    let strength = 0
+    if (password.length >= 8) strength++
+    if (/[A-Z]/.test(password)) strength++
+    if (/[a-z]/.test(password)) strength++
+    if (/[0-9]/.test(password)) strength++
+    if (/[^A-Za-z0-9]/.test(password)) strength++
+    return strength
+  }
+
+  const getPasswordStrengthText = (strength) => {
+    if (strength <= 1) return 'Weak'
+    if (strength <= 2) return 'Fair'
+    if (strength <= 3) return 'Good'
+    return 'Strong'
+  }
+
+  const isFormValid = () => {
+    return formData.password === formData.confirmPassword && passwordStrength.level >= 3
   }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     setError('')
+
+    // Validation
+    if (formData.password !== formData.confirmPassword) {
+      setError('Passwords do not match')
+      return
+    }
+
+    if (passwordStrength.level < 3) {
+      setError('Please choose a stronger password')
+      return
+    }
+
+    if (!formData.email && !formData.phone) {
+      setError('Please provide either an email or phone number')
+      return
+    }
+
     setLoading(true)
 
     try {
@@ -50,148 +99,175 @@ const AdminRegisterPage = () => {
       )
 
       await register(cleanData)
-      // Always redirect admins to dashboard
       navigate('/dashboard')
     } catch (error) {
       setError(error.message)
-    } finally {
       setLoading(false)
     }
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
-      <div className="sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="flex justify-center">
-          <div className="bg-red-600 p-3 rounded-full">
-            <UserPlus className="h-8 w-8 text-white" />
+    <div className="admin-auth-container admin-register-container">
+      <div className="admin-auth-card admin-register-card">
+        <div className="admin-auth-header">
+          <div className="admin-auth-icon">
+            <UserPlus size={32} />
           </div>
+          <h1 className="admin-auth-title">Join Our Team</h1>
+          <p className="admin-auth-subtitle">Request admin access to manage restaurant operations</p>
         </div>
-        <h2 className="mt-6 text-center text-3xl font-extrabold text-white">
-          Admin Registration
-        </h2>
-        <p className="mt-2 text-center text-sm text-gray-300">
-          Create your restaurant management account
-        </p>
-      </div>
 
-      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="bg-white py-8 px-4 shadow-xl rounded-lg sm:px-10">
-          <form className="space-y-6" onSubmit={handleSubmit}>
-            <div>
-              <label htmlFor="fullName" className="block text-sm font-medium text-gray-700">
-                <User className="inline h-4 w-4 mr-2" />
-                Full name *
-              </label>
-              <div className="mt-1">
-                <input
-                  id="fullName"
-                  name="fullName"
-                  type="text"
-                  autoComplete="name"
-                  required
-                  value={formData.fullName}
-                  onChange={handleChange}
-                  className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-red-500 focus:border-red-500 sm:text-sm"
-                  placeholder="Enter your full name"
-                />
-              </div>
+        {(error || authError) && (
+          <div className="error-message">
+            <Shield size={16} />
+            {error || authError}
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="admin-form">
+          <div className="form-group">
+            <label htmlFor="fullName" className="form-label">Full Name</label>
+            <div style={{ position: 'relative' }}>
+              <User className="input-icon" size={20} />
+              <input
+                type="text"
+                id="fullName"
+                name="fullName"
+                value={formData.fullName}
+                onChange={handleChange}
+                className="form-input"
+                placeholder="John Doe"
+                required
+              />
             </div>
+          </div>
 
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                <Mail className="inline h-4 w-4 mr-2" />
-                Email address
-              </label>
-              <div className="mt-1">
-                <input
-                  id="email"
-                  name="email"
-                  type="email"
-                  autoComplete="email"
-                  value={formData.email}
-                  onChange={handleChange}
-                  className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-red-500 focus:border-red-500 sm:text-sm"
-                  placeholder="admin@restaurant.com"
-                />
-              </div>
+          <div className="form-group">
+            <label htmlFor="email" className="form-label">Email Address</label>
+            <div style={{ position: 'relative' }}>
+              <Mail className="input-icon" size={20} />
+              <input
+                type="email"
+                id="email"
+                name="email"
+                value={formData.email}
+                onChange={handleChange}
+                className="form-input"
+                placeholder="john@example.com"
+                required
+              />
             </div>
+          </div>
 
-            <div>
-              <label htmlFor="phone" className="block text-sm font-medium text-gray-700">
-                <Phone className="inline h-4 w-4 mr-2" />
-                Phone number
-              </label>
-              <div className="mt-1">
-                <input
-                  id="phone"
-                  name="phone"
-                  type="tel"
-                  autoComplete="tel"
-                  value={formData.phone}
-                  onChange={handleChange}
-                  className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-red-500 focus:border-red-500 sm:text-sm"
-                  placeholder="(555) 123-4567"
-                />
-              </div>
+          <div className="form-group">
+            <label htmlFor="phone" className="form-label">Phone Number</label>
+            <div style={{ position: 'relative' }}>
+              <Phone className="input-icon" size={20} />
+              <input
+                type="tel"
+                id="phone"
+                name="phone"
+                value={formData.phone}
+                onChange={handleChange}
+                className="form-input"
+                placeholder="(555) 123-4567"
+                required
+              />
             </div>
+          </div>
 
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                <Lock className="inline h-4 w-4 mr-2" />
-                Password *
-              </label>
-              <div className="mt-1">
-                <input
-                  id="password"
-                  name="password"
-                  type="password"
-                  autoComplete="new-password"
-                  required
-                  value={formData.password}
-                  onChange={handleChange}
-                  className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-red-500 focus:border-red-500 sm:text-sm"
-                  placeholder="Create a secure password"
-                />
-              </div>
-            </div>
-
-            {(error || authError) && (
-              <div className="text-red-600 text-sm text-center bg-red-50 p-3 rounded-md">
-                {error || authError}
-              </div>
-            )}
-
-            <div>
+          <div className="form-group">
+            <label htmlFor="password" className="form-label">Password</label>
+            <div style={{ position: 'relative' }}>
+              <Lock className="input-icon" size={20} />
+              <input
+                type={showPassword ? 'text' : 'password'}
+                id="password"
+                name="password"
+                value={formData.password}
+                onChange={handleChange}
+                className="form-input"
+                placeholder="••••••••"
+                required
+              />
               <button
-                type="submit"
-                disabled={loading}
-                className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50"
+                type="button"
+                className="password-toggle"
+                onClick={() => setShowPassword(!showPassword)}
               >
-                {loading ? 'Creating account...' : 'Create Admin Account'}
+                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
               </button>
             </div>
-          </form>
-
-          <div className="mt-6 text-center">
-            <p className="text-sm text-gray-600">
-              Already have admin access?{' '}
-              <Link to="/admin/login" className="font-medium text-red-600 hover:text-red-500">
-                Sign in here
-              </Link>
-            </p>
+            {formData.password && (
+              <div className="password-strength">
+                <div className="password-strength-bar">
+                  <div className={`password-strength-fill ${passwordStrength.level <= 1 ? 'weak' : passwordStrength.level <= 2 ? 'fair' : passwordStrength.level <= 3 ? 'good' : 'strong'}`}></div>
+                </div>
+                <div className={`password-strength-text ${passwordStrength.level <= 1 ? 'weak' : passwordStrength.level <= 2 ? 'fair' : passwordStrength.level <= 3 ? 'good' : 'strong'}`}>
+                  {passwordStrength.text}
+                </div>
+              </div>
+            )}
           </div>
 
-          <div className="mt-4 text-center">
-            <Link to="/" className="text-sm text-gray-500 hover:text-gray-700">
-              ← Back to main site
+          <div className="form-group">
+            <label htmlFor="confirmPassword" className="form-label">Confirm Password</label>
+            <div style={{ position: 'relative' }}>
+              <Lock className="input-icon" size={20} />
+              <input
+                type={showConfirmPassword ? 'text' : 'password'}
+                id="confirmPassword"
+                name="confirmPassword"
+                value={formData.confirmPassword}
+                onChange={handleChange}
+                className={`form-input ${formData.confirmPassword && formData.password !== formData.confirmPassword ? 'error' : ''}`}
+                placeholder="••••••••"
+                required
+              />
+              <button
+                type="button"
+                className="password-toggle"
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+              >
+                {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+              </button>
+            </div>
+            {formData.confirmPassword && formData.password !== formData.confirmPassword && (
+              <div className="error-message" style={{ marginTop: '8px', marginBottom: '0' }}>
+                Passwords do not match
+              </div>
+            )}
+          </div>
+
+          <button
+            type="submit"
+            disabled={loading || !isFormValid()}
+            className="submit-btn"
+          >
+            {loading ? (
+              <>
+                <div className="spinner"></div>
+                Creating account...
+              </>
+            ) : (
+              <>
+                <UserPlus size={20} />
+                Request Access
+              </>
+            )}
+          </button>
+        </form>
+
+        <div className="auth-footer">
+          <div className="auth-footer-links">
+            <Link to="/admin/login" className="auth-footer-link">
+              <Shield size={16} />
+              Already have an account? Sign in
             </Link>
-          </div>
-
-          <div className="mt-4 text-center">
-            <p className="text-xs text-gray-500">
-              * Required fields. Either email or phone number must be provided.
-            </p>
+            <Link to="/" className="auth-footer-link">
+              <User size={16} />
+              Back to main site
+            </Link>
           </div>
         </div>
       </div>
@@ -199,4 +275,4 @@ const AdminRegisterPage = () => {
   )
 }
 
-export default AdminRegisterPage 
+export default AdminRegisterPage

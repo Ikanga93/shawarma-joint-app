@@ -24,10 +24,13 @@ import {
   Target,
   Upload,
   Edit2,
-  XCircle
+  XCircle,
+  RotateCcw,
+  Trash
 } from 'lucide-react'
 import { useBusinessConfig } from '../context/BusinessContext'
 import DashboardHeader from '../components/DashboardHeader'
+import AdminLocationSelector from '../components/AdminLocationSelector'
 import ApiService from '../services/ApiService'
 import io from 'socket.io-client'
 import API_BASE_URL from '../config/api.js'
@@ -42,6 +45,12 @@ const DashboardPage = ({ onLogout }) => {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState(null)
 
+  // User and location state
+  const [currentUser, setCurrentUser] = useState(null)
+  const [currentLocation, setCurrentLocation] = useState(null)
+  const [userLocations, setUserLocations] = useState([])
+  const [selectedLocationFilter, setSelectedLocationFilter] = useState('all')
+
   // Analytics state
   const [customerAnalytics, setCustomerAnalytics] = useState({
     totalCustomers: 0,
@@ -49,6 +58,10 @@ const DashboardPage = ({ onLogout }) => {
     returningCustomers: 0,
     topCustomers: []
   })
+  
+  // Persistent customer database - maintains customers even when orders are deleted
+  const [customerDatabase, setCustomerDatabase] = useState(new Map())
+  
   const [orderAnalytics, setOrderAnalytics] = useState({
     totalRevenue: 0,
     averageOrderValue: 0,
@@ -144,6 +157,19 @@ const DashboardPage = ({ onLogout }) => {
       try {
         setIsLoading(true)
         
+        // Initialize current user from localStorage
+        const adminToken = localStorage.getItem('adminAccessToken')
+        if (adminToken) {
+          try {
+            // Decode user info from token or get from API
+            const userInfo = JSON.parse(localStorage.getItem('currentUser') || '{}')
+            setCurrentUser(userInfo)
+            setCurrentLocation(userInfo.currentLocation)
+          } catch (error) {
+            console.error('Error loading user info:', error)
+          }
+        }
+        
         // Load initial data in parallel
         await Promise.all([
           loadOrders(),
@@ -189,6 +215,13 @@ const DashboardPage = ({ onLogout }) => {
               )
             )
           })
+
+          // Listen for order deletions
+          newSocket.on('orderDeleted', (deletedOrderId) => {
+            setOrders(prevOrders =>
+              prevOrders.filter(order => order.id !== deletedOrderId)
+            )
+          })
         } catch (socketError) {
           console.warn('Socket.IO connection failed, continuing without real-time updates:', socketError)
         }
@@ -211,15 +244,39 @@ const DashboardPage = ({ onLogout }) => {
     }
   }, [])
 
+  // Location change handler
+  const handleLocationChange = (newLocation) => {
+    setCurrentLocation(newLocation)
+    // Update localStorage
+    const userInfo = JSON.parse(localStorage.getItem('currentUser') || '{}')
+    userInfo.currentLocation = newLocation
+    localStorage.setItem('currentUser', JSON.stringify(userInfo))
+    
+    // Reload orders for new location if location filtering is active
+    if (selectedLocationFilter !== 'all') {
+      loadOrders()
+    }
+  }
+
   // Load functions
   const loadOrders = async () => {
     try {
       console.log('🔄 Loading orders from API...')
-      const ordersData = await ApiService.getOrders()
+      
+      let ordersData
+      if (currentLocation && selectedLocationFilter === 'current') {
+        // Load orders for current location only
+        ordersData = await ApiService.getLocationOrders(currentLocation.id)
+      } else {
+        // Load all orders
+        ordersData = await ApiService.getOrders()
+      }
+      
       console.log('✅ Orders loaded successfully:', {
         count: ordersData.length,
         sample: ordersData[0],
-        allOrderIds: ordersData.map(o => o.id)
+        allOrderIds: ordersData.map(o => o.id),
+        location: currentLocation?.name || 'All locations'
       })
       setOrders(ordersData)
     } catch (error) {
@@ -283,21 +340,30 @@ const DashboardPage = ({ onLogout }) => {
     
     if (!orders || orders.length === 0) {
       console.log('⚠️ No orders provided to calculateCustomerAnalytics')
+      // Don't reset customer database when no orders - customers should persist
+      const customers = Array.from(customerDatabase.values())
       setCustomerAnalytics({
-        totalCustomers: 0,
+        totalCustomers: customers.length,
         newCustomers: 0,
         returningCustomers: 0,
-        topCustomers: []
+        topCustomers: customers.sort((a, b) => b.totalSpent - a.totalSpent).slice(0, 10)
       })
       return
     }
     
-    const customerMap = new Map()
+    // Start with existing customer database to preserve customers
+    const updatedCustomerMap = new Map(customerDatabase)
     const thirtyDaysAgo = new Date()
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
 
     let processedOrders = 0
     let skippedOrders = 0
+
+    // Reset order counts and spending for recalculation
+    updatedCustomerMap.forEach(customer => {
+      customer.totalOrders = 0
+      customer.totalSpent = 0
+    })
 
     orders.forEach((order, index) => {
       console.log(`🔄 Processing order ${index + 1}/${orders.length}:`, {
@@ -339,8 +405,8 @@ const DashboardPage = ({ onLogout }) => {
 
       const customerKey = order.customer_email || order.customer_phone
       
-      if (!customerMap.has(customerKey)) {
-        customerMap.set(customerKey, {
+      if (!updatedCustomerMap.has(customerKey)) {
+        updatedCustomerMap.set(customerKey, {
           name: order.customer_name || 'Unknown Customer',
           email: order.customer_email,
           phone: order.customer_phone,
@@ -351,9 +417,20 @@ const DashboardPage = ({ onLogout }) => {
         })
       }
       
-      const customer = customerMap.get(customerKey)
+      const customer = updatedCustomerMap.get(customerKey)
       customer.totalOrders += 1
       customer.totalSpent += parseFloat(order.total_amount) || 0
+      
+      // Update customer info if it's more complete
+      if (!customer.name || customer.name === 'Unknown Customer') {
+        customer.name = order.customer_name || customer.name
+      }
+      if (!customer.email && order.customer_email) {
+        customer.email = order.customer_email
+      }
+      if (!customer.phone && order.customer_phone) {
+        customer.phone = order.customer_phone
+      }
       
       if (orderDate < customer.firstOrder) {
         customer.firstOrder = orderDate
@@ -363,7 +440,7 @@ const DashboardPage = ({ onLogout }) => {
       processedOrders++
     })
 
-    const customers = Array.from(customerMap.values())
+    const customers = Array.from(updatedCustomerMap.values())
     const newCustomers = customers.filter(c => c.isNew).length
     const returningCustomers = customers.filter(c => c.totalOrders > 1).length
     const topCustomers = customers
@@ -387,6 +464,7 @@ const DashboardPage = ({ onLogout }) => {
       returningCustomers,
       topCustomers
     })
+    setCustomerDatabase(updatedCustomerMap)
   }
 
   const calculateOrderAnalytics = (orders) => {
@@ -941,6 +1019,10 @@ const DashboardPage = ({ onLogout }) => {
   // Customer modal functions
   const openCustomerModal = async (customer) => {
     console.log('🔍 Opening customer modal for:', customer)
+    console.log('🔍 Customer email:', customer?.email)
+    console.log('🔍 Customer phone:', customer?.phone)
+    console.log('🔍 Available orders:', orders.length)
+    
     setSelectedCustomer(customer)
     setShowCustomerModal(true)
     setLoadingCustomerOrders(true)
@@ -948,9 +1030,17 @@ const DashboardPage = ({ onLogout }) => {
     try {
       // Load customer's order history
       const customerKey = customer.email || customer.phone
-      const customerOrderHistory = orders.filter(order => 
-        order.customer_email === customerKey || order.customer_phone === customerKey
-      )
+      console.log('🔍 Looking for orders with customer key:', customerKey)
+      
+      const customerOrderHistory = orders.filter(order => {
+        const matches = order.customer_email === customerKey || order.customer_phone === customerKey
+        if (matches) {
+          console.log('✅ Found matching order:', order.id, order.customer_email, order.customer_phone)
+        }
+        return matches
+      })
+      
+      console.log('📋 Found customer orders:', customerOrderHistory.length)
       
       // Sort orders by date (newest first)
       const sortedOrders = customerOrderHistory.sort((a, b) => {
@@ -959,7 +1049,7 @@ const DashboardPage = ({ onLogout }) => {
         return dateB - dateA
       })
       
-      console.log('📋 Customer orders loaded:', sortedOrders.length)
+      console.log('📋 Customer orders loaded and sorted:', sortedOrders.length)
       setCustomerOrders(sortedOrders)
     } catch (error) {
       console.error('❌ Error loading customer orders:', error)
@@ -987,6 +1077,66 @@ const DashboardPage = ({ onLogout }) => {
     const mailtoLink = `mailto:${customerEmail}?subject=${subject}&body=${body}`
     
     window.open(mailtoLink, '_blank')
+  }
+
+  // Order Management Functions
+  const handleDeleteOrder = async (orderId, orderDetails) => {
+    const confirmMessage = `Are you sure you want to delete Order #${orderId}?\n\nCustomer: ${orderDetails.customer_name}\nTotal: $${(parseFloat(orderDetails.total_amount) || 0).toFixed(2)}\n\nThis action cannot be undone.`
+    
+    if (!window.confirm(confirmMessage)) {
+      return
+    }
+
+    try {
+      setIsLoading(true)
+      await ApiService.deleteOrder(orderId)
+      
+      // Remove from local state
+      setOrders(prevOrders => prevOrders.filter(order => order.id !== orderId))
+      
+      console.log(`🗑️ Order ${orderId} deleted successfully`)
+      alert('Order deleted successfully')
+    } catch (error) {
+      console.error('Error deleting order:', error)
+      alert('Failed to delete order. Please try again.')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleResetToCooking = async (orderId, orderDetails) => {
+    const timeRemaining = window.prompt(
+      `Reset Order #${orderId} to cooking status?\n\nCustomer: ${orderDetails.customer_name}\nCurrent Status: ${orderDetails.status}\n\nEnter cooking time in minutes:`, 
+      '15'
+    )
+    
+    if (timeRemaining === null) return // User canceled
+    
+    const cookingTime = parseInt(timeRemaining)
+    if (isNaN(cookingTime) || cookingTime <= 0) {
+      alert('Please enter a valid cooking time in minutes')
+      return
+    }
+
+    try {
+      setIsLoading(true)
+      const updatedOrder = await ApiService.resetOrderToCooking(orderId, cookingTime)
+      
+      // Update local state
+      setOrders(prevOrders => 
+        prevOrders.map(order => 
+          order.id === orderId ? { ...updatedOrder, items: updatedOrder.items || order.items } : order
+        )
+      )
+      
+      console.log(`🔄 Order ${orderId} reset to cooking with ${cookingTime} minutes`)
+      alert(`Order #${orderId} has been reset to cooking status with ${cookingTime} minutes`)
+    } catch (error) {
+      console.error('Error resetting order to cooking:', error)
+      alert('Failed to reset order to cooking. Please try again.')
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   const getStatusColor = (status) => {
@@ -1018,92 +1168,6 @@ const DashboardPage = ({ onLogout }) => {
   const formatOrderTime = (orderTime) => {
     const date = new Date(orderTime)
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-  }
-
-  // Geolocation function
-  const getCurrentLocation = () => {
-    setIsGettingLocation(true)
-    setLocationError('')
-
-    if (!navigator.geolocation) {
-      setLocationError('Geolocation is not supported by this browser.')
-      setIsGettingLocation(false)
-      return
-    }
-
-    // Try high accuracy first, then fallback to lower accuracy
-    const attemptLocation = (enableHighAccuracy = true) => {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const { latitude, longitude } = position.coords
-          setLiveLocationForm(prev => ({
-            ...prev,
-            latitude: latitude.toFixed(6),
-            longitude: longitude.toFixed(6)
-          }))
-          setIsGettingLocation(false)
-          
-          // Only try reverse geocoding if we don't have an address yet
-          if (!liveLocationForm.current_address.trim()) {
-            reverseGeocode(latitude, longitude)
-          }
-        },
-        (error) => {
-          console.log('Geolocation error:', error.code, error.message)
-          
-          // If high accuracy failed, try with lower accuracy
-          if (enableHighAccuracy && error.code === error.POSITION_UNAVAILABLE) {
-            console.log('Retrying with lower accuracy...')
-            attemptLocation(false)
-            return
-          }
-          
-          let errorMessage = 'Unable to get your exact location. '
-          switch(error.code) {
-            case error.PERMISSION_DENIED:
-              errorMessage += 'Please allow location access in your browser settings.'
-              break
-            case error.POSITION_UNAVAILABLE:
-              errorMessage += 'This may be due to a macOS Core Location issue. You can enter coordinates manually.'
-              break
-            case error.TIMEOUT:
-              errorMessage += 'Location request timed out. Please try again or enter coordinates manually.'
-              break
-            default:
-              errorMessage += 'You can still add the location by entering coordinates manually.'
-              break
-          }
-          setLocationError(errorMessage)
-          setIsGettingLocation(false)
-        },
-        {
-          enableHighAccuracy: enableHighAccuracy,
-          timeout: enableHighAccuracy ? 15000 : 30000, // Longer timeout for low accuracy
-          maximumAge: 60000 // Accept 1-minute old location
-        }
-      )
-    }
-
-    attemptLocation(true)
-  }
-
-  // Reverse geocoding to get address from coordinates
-  const reverseGeocode = async (lat, lng) => {
-    try {
-      // Using a simple geocoding service (you might want to use Google Maps API with your key)
-      const response = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=en`)
-      const data = await response.json()
-      
-      if (data && data.displayName) {
-        setLiveLocationForm(prev => ({
-          ...prev,
-          current_address: data.displayName
-        }))
-      }
-    } catch (error) {
-      console.log('Reverse geocoding failed:', error)
-      // This is optional, so we don't show an error to the user
-    }
   }
 
   // Order Management Tab
@@ -1227,6 +1291,24 @@ const DashboardPage = ({ onLogout }) => {
                           Complete
                         </button>
                       )}
+                      {(order.status === 'ready' || order.status === 'completed' || order.status === 'canceled') && (
+                        <button 
+                          className="btn-action reset"
+                          onClick={() => handleResetToCooking(order.id, order)}
+                          title="Reset order to cooking status"
+                        >
+                          <RotateCcw size={14} />
+                          Reset
+                        </button>
+                      )}
+                      <button 
+                        className="btn-action delete"
+                        onClick={() => handleDeleteOrder(order.id, order)}
+                        title="Delete this order permanently"
+                      >
+                        <Trash size={14} />
+                        Delete
+                      </button>
                     </div>
                   </div>
                 ))}
@@ -1657,12 +1739,28 @@ const DashboardPage = ({ onLogout }) => {
                     <div className="customer-info">
                       <div className="customer-name">{customer.name}</div>
                       <div className="customer-contact">
-                        {customer.email || customer.phone}
+                        {customer.phone}
                       </div>
                     </div>
                     <div className="customer-stats">
                       <div className="customer-spent">${customer.totalSpent.toFixed(2)}</div>
                       <div className="customer-orders">{customer.totalOrders} orders</div>
+                    </div>
+                    <div className="customer-actions">
+                      {customer.email ? (
+                        <button 
+                          className="btn-email-mini"
+                          onClick={(e) => {
+                            e.stopPropagation(); // Prevent opening modal
+                            sendEmailToCustomer(customer.email);
+                          }}
+                          title="Send email to customer"
+                        >
+                          <Mail size={14} />
+                        </button>
+                      ) : (
+                        <span className="no-email-mini" title="No email available">📧</span>
+                      )}
                     </div>
                   </div>
                 ))
@@ -1913,7 +2011,6 @@ const DashboardPage = ({ onLogout }) => {
                 <div className="order-customer">
                   <h3>{order.customer_name}</h3>
                   <p>{order.customer_phone}</p>
-                  {order.customer_email && <p>{order.customer_email}</p>}
                   <small>{formatOrderTime(order.order_time)}</small>
                 </div>
 
@@ -2079,6 +2176,35 @@ const DashboardPage = ({ onLogout }) => {
         onTabChange={setActiveTab}
         onLogout={onLogout}
       />
+      
+      {/* Location Selector for Multi-Location Users */}
+      {currentUser && (
+        <div className="dashboard-location-bar">
+          <AdminLocationSelector 
+            user={currentUser}
+            onLocationChange={handleLocationChange}
+          />
+          
+          {/* Location Filter Controls */}
+          {currentUser.assignedLocations && currentUser.assignedLocations.length > 1 && (
+            <div className="location-filter-controls">
+              <label>View Orders:</label>
+              <select 
+                value={selectedLocationFilter} 
+                onChange={(e) => {
+                  setSelectedLocationFilter(e.target.value)
+                  // Reload orders when filter changes
+                  setTimeout(() => loadOrders(), 100)
+                }}
+                className="location-filter-select"
+              >
+                <option value="all">All Locations</option>
+                <option value="current">Current Location Only</option>
+              </select>
+            </div>
+          )}
+        </div>
+      )}
       
       <div className="dashboard-main">
         <div className="dashboard-content">
@@ -2401,7 +2527,7 @@ const DashboardPage = ({ onLogout }) => {
                             longitude: '',
                             current_address: ''
                           }))
-                          setLocationError('')
+                          setLocationError('') // Clear location errors when clearing coordinates
                         }}
                       >
                         Clear
@@ -2467,7 +2593,7 @@ const DashboardPage = ({ onLogout }) => {
         )}
 
         {/* Customer Modal */}
-        {showCustomerModal && (
+        {showCustomerModal && selectedCustomer && (
           <div className="modal-overlay" onClick={closeCustomerModal}>
             <div className="modal-content" onClick={(e) => e.stopPropagation()}>
               <div className="modal-header">
@@ -2477,13 +2603,16 @@ const DashboardPage = ({ onLogout }) => {
               
               <div className="customer-modal-content">
                 <div className="customer-info">
-                  <h3>{selectedCustomer.name}</h3>
-                  <p>{selectedCustomer.email}</p>
-                  <p>{selectedCustomer.phone}</p>
+                  <h3>{selectedCustomer?.name || 'Unknown Customer'}</h3>
+                  {selectedCustomer?.phone && <p>📞 {selectedCustomer.phone}</p>}
+                  <div className="customer-stats">
+                    <p><strong>Total Orders:</strong> {selectedCustomer?.totalOrders || 0}</p>
+                    <p><strong>Total Spent:</strong> ${(selectedCustomer?.totalSpent || 0).toFixed(2)}</p>
+                  </div>
                 </div>
 
                 <div className="customer-orders">
-                  <h3>Order History</h3>
+                  <h3>Order History ({customerOrders.length} orders)</h3>
                   {loadingCustomerOrders ? (
                     <div className="loading-orders">
                       <div className="loading-spinner"></div>
@@ -2512,14 +2641,20 @@ const DashboardPage = ({ onLogout }) => {
                 </div>
 
                 <div className="customer-actions">
-                  <button 
-                    type="button" 
-                    className="btn-email"
-                    onClick={() => sendEmailToCustomer(selectedCustomer.email)}
-                  >
-                    <Mail size={16} />
-                    Send Email
-                  </button>
+                  {selectedCustomer?.email ? (
+                    <button 
+                      type="button" 
+                      className="btn-email"
+                      onClick={() => sendEmailToCustomer(selectedCustomer.email)}
+                    >
+                      <Mail size={16} />
+                      Send Email
+                    </button>
+                  ) : (
+                    <div className="no-email-notice">
+                      <p>📧 No email address available for this customer</p>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

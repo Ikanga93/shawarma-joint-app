@@ -251,6 +251,230 @@ const authorizeRole = (roles) => {
 
 // API Routes
 
+// Location management endpoints
+
+// Get all locations
+app.get('/api/locations', async (req, res) => {
+  try {
+    const locations = await queryAll(`
+      SELECT * FROM locations 
+      WHERE status = 'active' 
+      ORDER BY name ASC
+    `)
+    res.json(locations)
+  } catch (error) {
+    console.error('Error fetching locations:', error)
+    res.status(500).json({ error: 'Failed to fetch locations' })
+  }
+})
+
+// Create new location (admin only)
+app.post('/api/locations', authenticateToken, authorizeRole(['admin']), async (req, res) => {
+  try {
+    const { name, type = 'mobile', description, currentLocation, schedule, phone } = req.body
+
+    if (!name) {
+      return res.status(400).json({ error: 'Location name is required' })
+    }
+
+    const locationId = `LOC-${uuidv4().substring(0, 8).toUpperCase()}`
+
+    await query(`
+      INSERT INTO locations (id, name, type, description, current_location, schedule, phone)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `, [locationId, name, type, description, currentLocation, schedule, phone])
+
+    const newLocation = await queryOne('SELECT * FROM locations WHERE id = ?', [locationId])
+    res.json(newLocation)
+  } catch (error) {
+    console.error('Error creating location:', error)
+    res.status(500).json({ error: 'Failed to create location' })
+  }
+})
+
+// Update location (admin only)
+app.put('/api/locations/:locationId', authenticateToken, authorizeRole(['admin']), async (req, res) => {
+  try {
+    const { locationId } = req.params
+    const { name, type, description, currentLocation, schedule, phone, status } = req.body
+
+    await query(`
+      UPDATE locations 
+      SET name = ?, type = ?, description = ?, current_location = ?, 
+          schedule = ?, phone = ?, status = ?, updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `, [name, type, description, currentLocation, schedule, phone, status, locationId])
+
+    const updatedLocation = await queryOne('SELECT * FROM locations WHERE id = ?', [locationId])
+    res.json(updatedLocation)
+  } catch (error) {
+    console.error('Error updating location:', error)
+    res.status(500).json({ error: 'Failed to update location' })
+  }
+})
+
+// User location management endpoints
+
+// Get user's assigned locations
+app.get('/api/users/:userId/locations', authenticateToken, async (req, res) => {
+  try {
+    const { userId } = req.params
+    
+    // Check if user is requesting their own locations or is admin
+    if (req.user.id !== userId && req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Access denied' })
+    }
+
+    const userLocations = await queryAll(`
+      SELECT ul.*, l.name as location_name, l.type, l.description, l.status
+      FROM user_locations ul
+      JOIN locations l ON ul.location_id = l.id
+      WHERE ul.user_id = ? AND ul.is_active = true
+      ORDER BY ul.assigned_at DESC
+    `, [userId])
+
+    res.json(userLocations)
+  } catch (error) {
+    console.error('Error fetching user locations:', error)
+    res.status(500).json({ error: 'Failed to fetch user locations' })
+  }
+})
+
+// Assign user to location (admin only)
+app.post('/api/users/:userId/locations', authenticateToken, authorizeRole(['admin']), async (req, res) => {
+  try {
+    const { userId } = req.params
+    const { locationId, role = 'staff' } = req.body
+
+    if (!locationId) {
+      return res.status(400).json({ error: 'Location ID is required' })
+    }
+
+    // Check if location exists
+    const location = await queryOne('SELECT * FROM locations WHERE id = ?', [locationId])
+    if (!location) {
+      return res.status(404).json({ error: 'Location not found' })
+    }
+
+    // Check if user exists
+    const user = await queryOne('SELECT * FROM users WHERE id = ?', [userId])
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' })
+    }
+
+    // Insert or update user location assignment
+    await query(`
+      INSERT INTO user_locations (user_id, location_id, role, assigned_by)
+      VALUES (?, ?, ?, ?)
+      ON CONFLICT (user_id, location_id) 
+      DO UPDATE SET role = ?, is_active = true, assigned_at = CURRENT_TIMESTAMP
+    `, [userId, locationId, role, req.user.id, role])
+
+    res.json({ message: 'User assigned to location successfully' })
+  } catch (error) {
+    console.error('Error assigning user to location:', error)
+    res.status(500).json({ error: 'Failed to assign user to location' })
+  }
+})
+
+// Update user's current location
+app.put('/api/users/:userId/current-location', authenticateToken, async (req, res) => {
+  try {
+    const { userId } = req.params
+    const { locationId } = req.body
+
+    // Check if user is updating their own location or is admin
+    if (req.user.id !== userId && req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Access denied' })
+    }
+
+    // Verify user has access to this location
+    const userLocation = await queryOne(`
+      SELECT * FROM user_locations 
+      WHERE user_id = ? AND location_id = ? AND is_active = true
+    `, [userId, locationId])
+
+    if (!userLocation && req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'User not assigned to this location' })
+    }
+
+    // Update admin profile with current location
+    await query(`
+      UPDATE admin_profiles 
+      SET current_location_id = ?, updated_at = CURRENT_TIMESTAMP 
+      WHERE user_id = ?
+    `, [locationId, userId])
+
+    res.json({ message: 'Current location updated successfully' })
+  } catch (error) {
+    console.error('Error updating current location:', error)
+    res.status(500).json({ error: 'Failed to update current location' })
+  }
+})
+
+// Get orders for specific location
+app.get('/api/locations/:locationId/orders', authenticateToken, async (req, res) => {
+  try {
+    const { locationId } = req.params
+
+    // Check if user has access to this location
+    if (req.user.role !== 'admin') {
+      const userLocation = await queryOne(`
+        SELECT * FROM user_locations 
+        WHERE user_id = ? AND location_id = ? AND is_active = true
+      `, [req.user.id, locationId])
+
+      if (!userLocation) {
+        return res.status(403).json({ error: 'Access denied to this location' })
+      }
+    }
+
+    const orders = await queryAll(`
+      SELECT * FROM orders 
+      WHERE location_id = ? 
+      ORDER BY order_date DESC
+    `, [locationId])
+
+    res.json(orders)
+  } catch (error) {
+    console.error('Error fetching location orders:', error)
+    res.status(500).json({ error: 'Failed to fetch location orders' })
+  }
+})
+
+// Get all users with their location assignments (admin only)
+app.get('/api/admin/users', authenticateToken, authorizeRole(['admin']), async (req, res) => {
+  try {
+    const users = await queryAll(`
+      SELECT 
+        u.id, u.email, u.phone, u.role, u.first_name, u.last_name, u.created_at,
+        ap.current_location_id, ap.last_login,
+        l.name as current_location_name
+      FROM users u
+      LEFT JOIN admin_profiles ap ON u.id = ap.user_id
+      LEFT JOIN locations l ON ap.current_location_id = l.id
+      WHERE u.role = 'admin'
+      ORDER BY u.created_at DESC
+    `)
+
+    // Get location assignments for each user
+    for (let user of users) {
+      const locations = await queryAll(`
+        SELECT ul.*, l.name as location_name, l.type
+        FROM user_locations ul
+        JOIN locations l ON ul.location_id = l.id
+        WHERE ul.user_id = ? AND ul.is_active = true
+      `, [user.id])
+      user.assigned_locations = locations
+    }
+
+    res.json(users)
+  } catch (error) {
+    console.error('Error fetching users:', error)
+    res.status(500).json({ error: 'Failed to fetch users' })
+  }
+})
+
 // Create order and Stripe checkout session
 app.post('/api/orders', async (req, res) => {
   try {
@@ -1180,6 +1404,35 @@ app.post('/api/auth/login', async (req, res) => {
       )
     }
 
+    // Get user's assigned locations if admin
+    let assignedLocations = []
+    let currentLocation = null
+    
+    if (user.role === 'admin') {
+      assignedLocations = await queryAll(`
+        SELECT ul.*, l.name as location_name, l.type, l.description, l.status
+        FROM user_locations ul
+        JOIN locations l ON ul.location_id = l.id
+        WHERE ul.user_id = ? AND ul.is_active = true
+        ORDER BY ul.assigned_at DESC
+      `, [user.id])
+
+      // Get current location from admin profile
+      const adminProfile = await queryOne(`
+        SELECT ap.current_location_id, l.name as current_location_name
+        FROM admin_profiles ap
+        LEFT JOIN locations l ON ap.current_location_id = l.id
+        WHERE ap.user_id = ?
+      `, [user.id])
+
+      if (adminProfile && adminProfile.current_location_id) {
+        currentLocation = {
+          id: adminProfile.current_location_id,
+          name: adminProfile.current_location_name
+        }
+      }
+    }
+
     res.json({
       success: true,
       user: {
@@ -1188,12 +1441,13 @@ app.post('/api/auth/login', async (req, res) => {
         phone: user.phone,
         role: user.role,
         firstName: user.first_name,
-        lastName: user.last_name
+        lastName: user.last_name,
+        assignedLocations,
+        currentLocation
       },
       accessToken,
       refreshToken
     })
-
   } catch (error) {
     console.error('Login error:', error)
     res.status(500).json({ error: 'Login failed' })
@@ -1382,7 +1636,7 @@ app.get('/api/debug-db', async (req, res) => {
     const tokensCount = await queryOne('SELECT COUNT(*) as count FROM auth_tokens')
     console.log('Tokens count:', tokensCount)
     
-    res.json({ 
+    res.json({
       success: true, 
       testQuery,
       usersCount,
@@ -1428,6 +1682,228 @@ app.get('/api/debug-live-locations', async (req, res) => {
     console.error('Live locations debug error:', error)
     res.status(500).json({ error: 'Live locations debug failed', details: error.message })
   }
+})
+
+// Delete order (admin only)
+app.delete('/api/orders/:orderId', authenticateToken, authorizeRole(['admin']), async (req, res) => {
+  try {
+    const { orderId } = req.params
+
+    // First check if order exists
+    const existingOrder = await queryOne('SELECT * FROM orders WHERE id = ?', [orderId])
+    if (!existingOrder) {
+      return res.status(404).json({ error: 'Order not found' })
+    }
+
+    // Delete from order_status_history first (foreign key constraint)
+    await query('DELETE FROM order_status_history WHERE order_id = ?', [orderId])
+    
+    // Delete the order
+    const result = await query('DELETE FROM orders WHERE id = ?', [orderId])
+    
+    if (result.changes === 0) {
+      return res.status(404).json({ error: 'Order not found' })
+    }
+
+    console.log(`🗑️ Order ${orderId} deleted by admin ${req.user.email}`)
+    
+    // Emit to all connected clients
+    io.emit('orderDeleted', { orderId: parseInt(orderId) })
+    
+    res.json({ 
+      message: 'Order deleted successfully', 
+      orderId: parseInt(orderId),
+      deletedOrder: {
+        ...existingOrder,
+        items: JSON.parse(existingOrder.items)
+      }
+    })
+  } catch (error) {
+    console.error('Error deleting order:', error)
+    res.status(500).json({ error: 'Failed to delete order' })
+  }
+})
+
+// Reset order status to cooking (admin only)
+app.put('/api/orders/:orderId/reset-to-cooking', authenticateToken, authorizeRole(['admin']), async (req, res) => {
+  try {
+    const { orderId } = req.params
+    const { timeRemaining = 15 } = req.body // Default 15 minutes cooking time
+
+    // Check if order exists
+    const existingOrder = await queryOne('SELECT * FROM orders WHERE id = ?', [orderId])
+    if (!existingOrder) {
+      return res.status(404).json({ error: 'Order not found' })
+    }
+
+    // Update order status to cooking with new time
+    const result = await query(
+      'UPDATE orders SET status = ?, time_remaining = ? WHERE id = ?',
+      ['cooking', timeRemaining, orderId]
+    )
+    
+    if (result.changes === 0) {
+      return res.status(404).json({ error: 'Order not found' })
+    }
+
+    // Add status change to history
+    await query(
+      'INSERT INTO order_status_history (order_id, status) VALUES (?, ?)',
+      [orderId, 'cooking']
+    )
+
+    // Get updated order
+    const row = await queryOne('SELECT * FROM orders WHERE id = ?', [orderId])
+    if (row) {
+      const updatedOrder = {
+        ...row,
+        items: JSON.parse(row.items),
+        orderTime: new Date(row.order_date)
+      }
+
+      console.log(`🔄 Order ${orderId} reset to cooking by admin ${req.user.email}`)
+      
+      // Emit to all connected clients
+      io.emit('orderUpdated', updatedOrder)
+      res.json(updatedOrder)
+    } else {
+      res.status(404).json({ error: 'Order not found after update' })
+    }
+  } catch (error) {
+    console.error('Error resetting order to cooking:', error)
+    res.status(500).json({ error: 'Failed to reset order to cooking' })
+  }
+})
+
+// Update order details (admin only)
+app.put('/api/orders/:orderId', authenticateToken, authorizeRole(['admin']), async (req, res) => {
+  try {
+    const { orderId } = req.params
+    const { customer_name, customer_email, customer_phone, items, total_amount, notes } = req.body
+    
+    await query(
+      'UPDATE orders SET customer_name = ?, customer_email = ?, customer_phone = ?, items = ?, total_amount = ?, notes = ? WHERE id = ?',
+      [customer_name, customer_email, customer_phone, JSON.stringify(items), total_amount, notes, orderId]
+    )
+
+    res.json({ success: true })
+  } catch (error) {
+    console.error('Error updating order:', error)
+    res.status(500).json({ error: 'Failed to update order' })
+  }
+})
+
+// Verify payment and update order
+app.post('/api/verify-payment', async (req, res) => {
+  try {
+    const { sessionId, orderId } = req.body
+
+    // Validate input parameters
+    if (!sessionId || !orderId) {
+      return res.status(400).json({ 
+        error: 'Session ID and Order ID are required for payment verification' 
+      })
+    }
+
+    // Basic validation for Stripe session ID format (unless it's a test)
+    if (!sessionId.startsWith('cs_') && sessionId !== 'test') {
+      console.warn('Invalid Stripe session ID format received:', sessionId)
+      return res.status(400).json({ 
+        error: 'Invalid payment session format' 
+      })
+    }
+
+    console.log(` Verifying payment for session: ${sessionId}, order: ${orderId}`)
+
+    // Retrieve the session from Stripe
+    const session = await stripe.checkout.sessions.retrieve(sessionId)
+    
+    console.log(` Stripe session status: ${session.payment_status}`)
+
+    if (session.payment_status === 'paid') {
+      // Update order status to confirmed and payment to completed
+      await query(
+        'UPDATE orders SET payment_status = ?, status = ? WHERE id = ?',
+        ['completed', 'confirmed', orderId]
+      )
+
+      // Add status change to history
+      await query(
+        'INSERT INTO order_status_history (order_id, status) VALUES (?, ?)',
+        [orderId, 'confirmed']
+      )
+
+      // Get updated order and notify admin
+      const row = await queryOne('SELECT * FROM orders WHERE id = ?', [orderId])
+      if (row) {
+        const updatedOrder = {
+          ...row,
+          items: JSON.parse(row.items),
+          orderTime: new Date(row.order_date)
+        }
+
+        // Notify admin of new paid order
+        io.to('admin').emit('new-order', updatedOrder)
+        io.to(`order-${orderId}`).emit('order-status-updated', updatedOrder)
+      }
+
+      console.log(` Payment verified successfully for order: ${orderId}`)
+      res.json({ success: true, paymentStatus: 'completed' })
+    } else {
+      console.log(` Payment not completed. Status: ${session.payment_status}`)
+      res.json({ success: false, paymentStatus: session.payment_status })
+    }
+  } catch (error) {
+    console.error(' Error verifying payment:', error)
+    
+    // Provide more specific error messages
+    if (error.message.includes('No such checkout.session')) {
+      res.status(400).json({ 
+        error: 'Invalid payment session. The session may have expired or does not exist.' 
+      })
+    } else if (error.message.includes('Invalid API Key')) {
+      res.status(500).json({ 
+        error: 'Payment service configuration error. Please contact support.' 
+      })
+    } else {
+      res.status(500).json({ 
+        error: 'Payment verification failed. Please try again or contact support.' 
+      })
+    }
+  }
+})
+
+// Stripe webhook for payment confirmation
+app.post('/api/webhook', express.raw({type: 'application/json'}), (req, res) => {
+  const sig = req.headers['stripe-signature']
+  let event
+
+  try {
+    event = stripe.webhooks.constructEvent(req.body, sig, process.env.STRIPE_WEBHOOK_SECRET)
+  } catch (err) {
+    console.log(`Webhook signature verification failed.`, err.message)
+    return res.status(400).send(`Webhook Error: ${err.message}`)
+  }
+
+  // Handle the event
+  switch (event.type) {
+    case 'checkout.session.completed':
+      const session = event.data.object
+      const orderId = session.metadata.orderId
+      
+      // Update order payment status
+      query(
+        'UPDATE orders SET payment_status = ?, status = ? WHERE stripe_session_id = ?',
+        ['completed', 'confirmed', session.id]
+      )
+      
+      console.log(`Payment completed for order: ${orderId}`)
+      break
+    default:
+      console.log(`Unhandled event type ${event.type}`)
+  }
+
+  res.json({received: true})
 })
 
 // Serve React app for client-side routing in production

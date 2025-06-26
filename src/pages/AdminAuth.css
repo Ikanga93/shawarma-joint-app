@@ -1,0 +1,518 @@
+/* Admin Authentication Pages Styles */
+
+.admin-auth-container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 50%, #991b1b 100%);
+  position: relative;
+  overflow: hidden;
+}
+
+.admin-auth-container::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.05'%3E%3Ccircle cx='30' cy='30' r='2'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  pointer-events: none;
+}
+
+.admin-auth-card {
+  background: white;
+  border-radius: 20px;
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15);
+  padding: 40px;
+  width: 100%;
+  max-width: 450px;
+  position: relative;
+  z-index: 1;
+}
+
+.admin-auth-header {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.admin-auth-icon {
+  width: 64px;
+  height: 64px;
+  background: linear-gradient(135deg, #dc2626, #b91c1c);
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 16px;
+  color: white;
+}
+
+.admin-auth-title {
+  font-size: 28px;
+  font-weight: 700;
+  color: #1f2937;
+  margin-bottom: 8px;
+}
+
+.admin-auth-subtitle {
+  color: #6b7280;
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+/* Login Method Toggle */
+.login-method-toggle {
+  display: flex;
+  background: #f3f4f6;
+  border-radius: 12px;
+  padding: 4px;
+  margin-bottom: 24px;
+}
+
+.login-method-btn {
+  flex: 1;
+  padding: 12px 16px;
+  border: none;
+  background: transparent;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.login-method-btn.active {
+  background: white;
+  color: #dc2626;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.login-method-btn:not(.active) {
+  color: #6b7280;
+}
+
+/* Form Styles */
+.admin-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.form-group {
+  position: relative;
+}
+
+.form-label {
+  display: block;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 8px;
+  font-size: 14px;
+}
+
+.form-input {
+  width: 100%;
+  padding: 14px 16px;
+  padding-left: 48px;
+  padding-right: 48px;
+  border: 2px solid #e5e7eb;
+  border-radius: 12px;
+  font-size: 16px;
+  transition: all 0.2s ease;
+  background: white;
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: #dc2626;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
+}
+
+.form-input.error {
+  border-color: #ef4444;
+}
+
+.input-icon {
+  position: absolute;
+  left: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #9ca3af;
+  width: 20px;
+  height: 20px;
+  z-index: 1;
+}
+
+.password-toggle {
+  position: absolute;
+  right: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: #9ca3af;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  transition: color 0.2s ease;
+  z-index: 2;
+}
+
+.password-toggle:hover {
+  color: #6b7280;
+}
+
+/* Password Strength Meter */
+.password-strength {
+  margin-top: 8px;
+}
+
+.password-strength-bar {
+  height: 4px;
+  border-radius: 2px;
+  background: #e5e7eb;
+  overflow: hidden;
+  margin-bottom: 4px;
+}
+
+.password-strength-fill {
+  height: 100%;
+  transition: all 0.3s ease;
+  border-radius: 2px;
+}
+
+.password-strength-fill.weak {
+  background: #ef4444;
+  width: 25%;
+}
+
+.password-strength-fill.fair {
+  background: #f59e0b;
+  width: 50%;
+}
+
+.password-strength-fill.good {
+  background: #10b981;
+  width: 75%;
+}
+
+.password-strength-fill.strong {
+  background: #059669;
+  width: 100%;
+}
+
+.password-strength-text {
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.password-strength-text.weak {
+  color: #ef4444;
+}
+
+.password-strength-text.fair {
+  color: #f59e0b;
+}
+
+.password-strength-text.good {
+  color: #10b981;
+}
+
+.password-strength-text.strong {
+  color: #059669;
+}
+
+/* Error Messages */
+.error-message {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #dc2626;
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+/* Submit Button */
+.submit-btn {
+  width: 100%;
+  padding: 16px;
+  background: linear-gradient(135deg, #dc2626, #b91c1c);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.submit-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #b91c1c, #991b1b);
+  transform: translateY(-1px);
+  box-shadow: 0 8px 25px rgba(220, 38, 38, 0.3);
+}
+
+.submit-btn:disabled {
+  background: #d1d5db;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.submit-btn .spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid transparent;
+  border-top: 2px solid currentColor;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Location Selection Step */
+.location-selection {
+  text-align: center;
+}
+
+.location-selection-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: #1f2937;
+  margin-bottom: 8px;
+}
+
+.location-selection-subtitle {
+  color: #6b7280;
+  margin-bottom: 24px;
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+.location-info-banner {
+  background: linear-gradient(135deg, #fef3c7, #fde68a);
+  border: 1px solid #f59e0b;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 24px;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  color: #92400e;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.location-info-banner svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.location-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.location-item {
+  padding: 16px;
+  border: 2px solid #e5e7eb;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-align: left;
+}
+
+.location-item:hover {
+  border-color: #dc2626;
+  background: #fef2f2;
+}
+
+.location-item.selected {
+  border-color: #dc2626;
+  background: #fef2f2;
+}
+
+.location-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  flex-shrink: 0;
+}
+
+.location-icon.restaurant {
+  background: linear-gradient(135deg, #059669, #047857);
+}
+
+.location-icon.food_truck {
+  background: linear-gradient(135deg, #dc2626, #b91c1c);
+}
+
+.location-details {
+  flex: 1;
+}
+
+.location-name {
+  font-weight: 600;
+  color: #1f2937;
+  margin-bottom: 4px;
+  font-size: 16px;
+}
+
+.location-description {
+  color: #6b7280;
+  font-size: 14px;
+  margin-bottom: 6px;
+}
+
+.location-role {
+  display: inline-block;
+  background: #dc2626;
+  color: white;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: uppercase;
+}
+
+.location-status {
+  display: flex;
+  align-items: center;
+  margin-left: 12px;
+}
+
+.active-indicator {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #059669;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.pulse-dot {
+  width: 8px;
+  height: 8px;
+  background: #059669;
+  border-radius: 50%;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.5;
+    transform: scale(1.2);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Footer Links */
+.auth-footer {
+  margin-top: 32px;
+  text-align: center;
+  padding-top: 24px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.auth-footer-links {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: center;
+}
+
+.auth-footer-link {
+  color: #6b7280;
+  text-decoration: none;
+  font-size: 14px;
+  transition: color 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.auth-footer-link:hover {
+  color: #dc2626;
+}
+
+/* Responsive Design */
+@media (max-width: 480px) {
+  .admin-auth-container {
+    padding: 16px;
+  }
+  
+  .admin-auth-card {
+    padding: 24px;
+  }
+  
+  .admin-auth-title {
+    font-size: 24px;
+  }
+  
+  .auth-footer-links {
+    flex-direction: column;
+  }
+}
+
+/* Register Page Specific Styles */
+.admin-register-container {
+  background: linear-gradient(135deg, #059669 0%, #047857 50%, #065f46 100%);
+}
+
+.admin-register-card .admin-auth-icon {
+  background: linear-gradient(135deg, #059669, #047857);
+}
+
+.admin-register-card .submit-btn {
+  background: linear-gradient(135deg, #059669, #047857);
+}
+
+.admin-register-card .submit-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #047857, #065f46);
+  box-shadow: 0 8px 25px rgba(5, 150, 105, 0.3);
+}
+
+.admin-register-card .form-input:focus {
+  border-color: #059669;
+  box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.1);
+}
+
+.admin-register-card .login-method-btn.active {
+  color: #059669;
+}

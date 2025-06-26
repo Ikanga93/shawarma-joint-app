@@ -17,15 +17,55 @@ const MenuPage = () => {
   useEffect(() => {
     const loadMenuItems = async () => {
       try {
+        setIsLoading(true)
+        setError(null)
+        
+        // Check if we have cached menu items
+        const cachedItems = sessionStorage.getItem('menuItems')
+        const cacheTimestamp = sessionStorage.getItem('menuItemsTimestamp')
+        const now = Date.now()
+        const cacheExpiry = 5 * 60 * 1000 // 5 minutes
+        
+        if (cachedItems && cacheTimestamp && (now - parseInt(cacheTimestamp)) < cacheExpiry) {
+          console.log('Loading menu items from cache (MenuPage)')
+          const items = JSON.parse(cachedItems)
+          const availableItems = items.filter(item => item.available)
+          setMenuItems(availableItems)
+          setIsLoading(false)
+          return
+        }
+        
+        console.log('Fetching menu items from API (MenuPage)')
         const items = await ApiService.getMenuItems()
+        
+        // Cache the results
+        sessionStorage.setItem('menuItems', JSON.stringify(items))
+        sessionStorage.setItem('menuItemsTimestamp', now.toString())
+        
         // Filter only available items
         const availableItems = items.filter(item => item.available)
         setMenuItems(availableItems)
       } catch (error) {
         console.error('Error loading menu items:', error)
         setError('Failed to load menu items')
-        // Fallback to default items
-        setMenuItems([])
+        
+        // Try to load from cache even if expired as fallback
+        const cachedItems = sessionStorage.getItem('menuItems')
+        if (cachedItems) {
+          console.log('Loading expired cache as fallback (MenuPage)')
+          try {
+            const items = JSON.parse(cachedItems)
+            const availableItems = items.filter(item => item.available)
+            setMenuItems(availableItems)
+          } catch (cacheError) {
+            console.error('Cache fallback failed:', cacheError)
+            // Fallback to empty array to prevent crashes
+            setMenuItems([])
+          }
+        } else {
+          // Fallback to empty array to prevent crashes
+          setMenuItems([])
+        }
       } finally {
         setIsLoading(false)
       }

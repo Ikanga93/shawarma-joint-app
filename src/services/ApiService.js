@@ -50,23 +50,15 @@ class ApiService {
 
     const response = await fetch(`${this.BASE_URL}/auth/refresh`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ refreshToken })
     })
 
-    const data = await response.json()
-
     if (!response.ok) {
-      throw new Error(data.error || 'Token refresh failed')
+      throw new Error('Token refresh failed')
     }
 
-    // Verify refreshed user is still an admin
-    if (data.user.role !== 'admin') {
-      throw new Error('Invalid user role after refresh')
-    }
-
+    const data = await response.json()
     localStorage.setItem('adminAccessToken', data.accessToken)
     return data.accessToken
   }
@@ -169,6 +161,35 @@ class ApiService {
       headers: this.getAuthHeaders()
     })
     if (!response.ok) throw new Error('Failed to fetch order')
+    return this.parseResponse(response)
+  }
+
+  static async deleteOrder(orderId) {
+    const response = await this.makeAuthenticatedRequest(`${this.BASE_URL}/orders/${orderId}`, {
+      method: 'DELETE',
+      headers: this.getAdminAuthHeaders()
+    })
+    if (!response.ok) throw new Error('Failed to delete order')
+    return this.parseResponse(response)
+  }
+
+  static async resetOrderToCooking(orderId, timeRemaining = 15) {
+    const response = await this.makeAuthenticatedRequest(`${this.BASE_URL}/orders/${orderId}/reset-to-cooking`, {
+      method: 'PUT',
+      headers: this.getAdminAuthHeaders(),
+      body: JSON.stringify({ timeRemaining })
+    })
+    if (!response.ok) throw new Error('Failed to reset order to cooking')
+    return this.parseResponse(response)
+  }
+
+  static async updateOrder(orderId, orderData) {
+    const response = await this.makeAuthenticatedRequest(`${this.BASE_URL}/orders/${orderId}`, {
+      method: 'PUT',
+      headers: this.getAdminAuthHeaders(),
+      body: JSON.stringify(orderData)
+    })
+    if (!response.ok) throw new Error('Failed to update order')
     return this.parseResponse(response)
   }
 
@@ -323,6 +344,106 @@ class ApiService {
       throw error
     }
   }
+
+  // Location Management Methods
+
+  // Get all locations
+  static async getLocations() {
+    const response = await fetch(`${this.BASE_URL}/locations`)
+    if (!response.ok) {
+      throw new Error('Failed to fetch locations')
+    }
+    return response.json()
+  }
+
+  // Create new location (admin only)
+  static async createLocation(locationData) {
+    const response = await fetch(`${this.BASE_URL}/locations`, {
+      method: 'POST',
+      headers: this.getAdminAuthHeaders(),
+      body: JSON.stringify(locationData)
+    })
+    if (!response.ok) {
+      throw new Error('Failed to create location')
+    }
+    return response.json()
+  }
+
+  // Update location (admin only)
+  static async updateLocation(locationId, locationData) {
+    const response = await fetch(`${this.BASE_URL}/locations/${locationId}`, {
+      method: 'PUT',
+      headers: this.getAdminAuthHeaders(),
+      body: JSON.stringify(locationData)
+    })
+    if (!response.ok) {
+      throw new Error('Failed to update location')
+    }
+    return response.json()
+  }
+
+  // User Location Management Methods
+
+  // Get user's assigned locations
+  static async getUserLocations(userId) {
+    const response = await fetch(`${this.BASE_URL}/users/${userId}/locations`, {
+      headers: this.getAuthHeaders()
+    })
+    if (!response.ok) {
+      throw new Error('Failed to fetch user locations')
+    }
+    return response.json()
+  }
+
+  // Assign user to location (admin only)
+  static async assignUserToLocation(userId, locationId, role = 'staff') {
+    const response = await fetch(`${this.BASE_URL}/users/${userId}/locations`, {
+      method: 'POST',
+      headers: this.getAdminAuthHeaders(),
+      body: JSON.stringify({ locationId, role })
+    })
+    if (!response.ok) {
+      throw new Error('Failed to assign user to location')
+    }
+    return response.json()
+  }
+
+  // Update user's current location
+  static async updateUserCurrentLocation(userId, locationId) {
+    const response = await fetch(`${this.BASE_URL}/users/${userId}/current-location`, {
+      method: 'PUT',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify({ locationId })
+    })
+    if (!response.ok) {
+      throw new Error('Failed to update current location')
+    }
+    return response.json()
+  }
+
+  // Get orders for specific location
+  static async getLocationOrders(locationId) {
+    const response = await fetch(`${this.BASE_URL}/locations/${locationId}/orders`, {
+      headers: this.getAuthHeaders()
+    })
+    if (!response.ok) {
+      throw new Error('Failed to fetch location orders')
+    }
+    return response.json()
+  }
+
+  // Get all users with location assignments (admin only)
+  static async getAllUsers() {
+    const response = await fetch(`${this.BASE_URL}/admin/users`, {
+      headers: this.getAdminAuthHeaders()
+    })
+    if (!response.ok) {
+      throw new Error('Failed to fetch users')
+    }
+    return response.json()
+  }
+
+  // Order Management Methods
 }
 
-export default ApiService 
+export default ApiService

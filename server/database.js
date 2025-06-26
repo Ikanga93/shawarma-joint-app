@@ -346,6 +346,82 @@ const initializeSQLiteTables = () => {
         FOREIGN KEY (user_id) REFERENCES users (id)
       )`)
 
+      // Auth tokens table
+      db.run(`CREATE TABLE IF NOT EXISTS auth_tokens (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        token TEXT NOT NULL,
+        type TEXT NOT NULL,
+        expires_at DATETIME NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users (id)
+      )`)
+
+      // Customer profiles table
+      db.run(`CREATE TABLE IF NOT EXISTS customer_profiles (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id TEXT UNIQUE NOT NULL,
+        preferences TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users (id)
+      )`)
+
+      // Admin profiles table
+      db.run(`CREATE TABLE IF NOT EXISTS admin_profiles (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id TEXT UNIQUE NOT NULL,
+        permissions TEXT,
+        current_location_id TEXT,
+        last_login DATETIME,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users (id),
+        FOREIGN KEY (current_location_id) REFERENCES locations (id)
+      )`)
+
+      // User location assignments table
+      db.run(`CREATE TABLE IF NOT EXISTS user_locations (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id TEXT NOT NULL,
+        location_id TEXT NOT NULL,
+        role TEXT DEFAULT 'staff' CHECK(role IN ('admin', 'manager', 'staff')),
+        assigned_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        assigned_by TEXT,
+        is_active BOOLEAN DEFAULT 1,
+        UNIQUE(user_id, location_id),
+        FOREIGN KEY (user_id) REFERENCES users (id),
+        FOREIGN KEY (location_id) REFERENCES locations (id),
+        FOREIGN KEY (assigned_by) REFERENCES users (id)
+      )`)
+
+      // Order status history table
+      db.run(`CREATE TABLE IF NOT EXISTS order_status_history (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        order_id TEXT NOT NULL,
+        status TEXT NOT NULL,
+        changed_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        changed_by TEXT,
+        location_id TEXT,
+        FOREIGN KEY (order_id) REFERENCES orders (id),
+        FOREIGN KEY (changed_by) REFERENCES users (id),
+        FOREIGN KEY (location_id) REFERENCES locations (id)
+      )`)
+
+      // Locations table
+      db.run(`CREATE TABLE IF NOT EXISTS locations (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        type TEXT DEFAULT 'mobile',
+        description TEXT,
+        current_location TEXT,
+        schedule TEXT,
+        phone TEXT,
+        status TEXT DEFAULT 'active',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )`)
+
       // Live locations table - for real-time food truck locations (SQLite version)
       db.run(`CREATE TABLE IF NOT EXISTS live_locations (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -359,7 +435,7 @@ const initializeSQLiteTables = () => {
         last_updated DATETIME DEFAULT CURRENT_TIMESTAMP,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )`)
-
+      
       resolve()
     })
   })
@@ -443,10 +519,27 @@ const initializePostgreSQLTables = async () => {
     id SERIAL PRIMARY KEY,
     user_id VARCHAR(255) UNIQUE NOT NULL,
     permissions JSONB,
+    current_location_id VARCHAR(255),
     last_login TIMESTAMP,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users (id)
+    FOREIGN KEY (user_id) REFERENCES users (id),
+    FOREIGN KEY (current_location_id) REFERENCES locations (id)
+  )`)
+
+  // User location assignments table - many-to-many relationship
+  await query(`CREATE TABLE IF NOT EXISTS user_locations (
+    id SERIAL PRIMARY KEY,
+    user_id VARCHAR(255) NOT NULL,
+    location_id VARCHAR(255) NOT NULL,
+    role VARCHAR(50) DEFAULT 'staff' CHECK(role IN ('admin', 'manager', 'staff')),
+    assigned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    assigned_by VARCHAR(255),
+    is_active BOOLEAN DEFAULT true,
+    UNIQUE(user_id, location_id),
+    FOREIGN KEY (user_id) REFERENCES users (id),
+    FOREIGN KEY (location_id) REFERENCES locations (id),
+    FOREIGN KEY (assigned_by) REFERENCES users (id)
   )`)
 
   // Order status history table
@@ -455,7 +548,11 @@ const initializePostgreSQLTables = async () => {
     order_id VARCHAR(255) NOT NULL,
     status VARCHAR(50) NOT NULL,
     changed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (order_id) REFERENCES orders (id)
+    changed_by VARCHAR(255),
+    location_id VARCHAR(255),
+    FOREIGN KEY (order_id) REFERENCES orders (id),
+    FOREIGN KEY (changed_by) REFERENCES users (id),
+    FOREIGN KEY (location_id) REFERENCES locations (id)
   )`)
 
   // Locations table

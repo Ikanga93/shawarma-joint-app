@@ -1,4 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react'
+import ApiService from '../services/ApiService'
+import API_BASE_URL from '../config/api.js'
 
 const CartContext = createContext()
 
@@ -22,23 +24,61 @@ export const CartProvider = ({ children }) => {
       try {
         const parsedCart = JSON.parse(savedCart)
         console.log('Parsed cart:', parsedCart)
-        setCartItems(parsedCart)
+        // Restore image URLs by fetching menu items and matching them
+        restoreCartItemsWithImages(parsedCart)
       } catch (error) {
         console.error('Error loading cart from localStorage:', error)
+        setIsLoaded(true)
       }
+    } else {
+      setIsLoaded(true)
     }
-    setIsLoaded(true)
   }, [])
+
+  // Restore cart items with images from menu data
+  const restoreCartItemsWithImages = async (cartItems) => {
+    try {
+      const menuItems = await ApiService.getMenuItems()
+      const menuItemsMap = new Map(menuItems.map(item => [item.id, item]))
+      
+      const restoredItems = cartItems.map(cartItem => {
+        const menuItem = menuItemsMap.get(cartItem.id)
+        if (menuItem) {
+          // Restore the image_url and other properties that might have been stripped
+          return {
+            ...cartItem,
+            image_url: menuItem.image_url,
+            emoji: menuItem.emoji,
+            description: menuItem.description
+          }
+        }
+        return cartItem
+      })
+      
+      setCartItems(restoredItems)
+    } catch (error) {
+      console.error('Error restoring cart items with images:', error)
+      // Fallback to cart items without images
+      setCartItems(cartItems)
+    } finally {
+      setIsLoaded(true)
+    }
+  }
 
   // Save cart to localStorage whenever it changes (but only after initial load)
   useEffect(() => {
     if (isLoaded) {
       console.log('Saving cart to localStorage:', cartItems)
       try {
-        // Filter out large image data to prevent localStorage quota issues
+        // Only save essential data to localStorage to prevent quota issues
+        // Keep image_url as just the filename/path, not full data URLs
         const cartItemsForStorage = cartItems.map(item => {
-          const { image_url, ...itemWithoutImage } = item;
-          return itemWithoutImage;
+          const { ...itemData } = item;
+          // If image_url is a data URL, don't save it to localStorage
+          if (itemData.image_url && itemData.image_url.startsWith('data:')) {
+            delete itemData.image_url;
+          }
+          return itemData;
         });
         localStorage.setItem('cart', JSON.stringify(cartItemsForStorage))
       } catch (error) {

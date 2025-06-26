@@ -1,7 +1,9 @@
 import React, { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAdminAuth } from '../contexts/AdminAuthContext'
-import { Shield, Lock, User } from 'lucide-react'
+import { Shield, Lock, User, MapPin, Building, Truck, Eye, EyeOff, Mail, Phone } from 'lucide-react'
+import ApiService from '../services/ApiService'
+import './AdminAuth.css'
 
 const AdminLoginPage = () => {
   const navigate = useNavigate()
@@ -13,6 +15,12 @@ const AdminLoginPage = () => {
   })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [loginStep, setLoginStep] = useState('credentials') // 'credentials' or 'location'
+  const [userLocations, setUserLocations] = useState([])
+  const [selectedLocation, setSelectedLocation] = useState('')
+  const [loginResponse, setLoginResponse] = useState(null)
+  const [showPassword, setShowPassword] = useState(false)
+  const [loginMethod, setLoginMethod] = useState('email') // 'email' or 'phone'
 
   const handleChange = (e) => {
     const { name, value } = e.target
@@ -22,130 +30,282 @@ const AdminLoginPage = () => {
     }))
   }
 
-  const handleSubmit = async (e) => {
+  const getLocationIcon = (type) => {
+    switch (type) {
+      case 'food_truck':
+        return <Truck className="h-5 w-5" />
+      case 'restaurant':
+        return <Building className="h-5 w-5" />
+      default:
+        return <MapPin className="h-5 w-5" />
+    }
+  }
+
+  const handleCredentialsSubmit = async (e) => {
     e.preventDefault()
     setError('')
     setLoading(true)
 
     try {
-      // Remove empty fields
-      const credentials = Object.fromEntries(
-        Object.entries(formData).filter(([_, value]) => value.trim() !== '')
-      )
+      // Prepare credentials based on login method
+      const credentials = {
+        password: formData.password
+      }
+      
+      if (loginMethod === 'email') {
+        credentials.email = formData.email
+      } else {
+        credentials.phone = formData.phone
+      }
 
-      await login(credentials)
-      // Always redirect admins to dashboard
-      navigate('/dashboard')
+      const response = await login(credentials)
+      setLoginResponse(response)
+      
+      // Check if user has multiple locations
+      if (response.assignedLocations && response.assignedLocations.length > 1) {
+        setUserLocations(response.assignedLocations)
+        setLoginStep('location')
+        setLoading(false)
+      } else if (response.assignedLocations && response.assignedLocations.length === 1) {
+        // Auto-select single location and proceed
+        await selectLocationAndProceed(response.assignedLocations[0].location_id)
+      } else {
+        // No locations assigned, proceed to dashboard
+        navigate('/dashboard')
+      }
     } catch (error) {
       setError(error.message)
-    } finally {
       setLoading(false)
     }
   }
 
+  const selectLocationAndProceed = async (locationId) => {
+    try {
+      setLoading(true)
+      // Update user's current location
+      await ApiService.updateUserCurrentLocation(loginResponse.user.id, locationId)
+      
+      // Update localStorage with selected location
+      const userInfo = JSON.parse(localStorage.getItem('currentUser') || '{}')
+      const selectedLocationData = userLocations.find(loc => loc.location_id === locationId)
+      userInfo.currentLocation = {
+        id: locationId,
+        name: selectedLocationData?.location_name,
+        type: selectedLocationData?.type,
+        role: selectedLocationData?.role
+      }
+      localStorage.setItem('currentUser', JSON.stringify(userInfo))
+      
+      navigate('/dashboard')
+    } catch (error) {
+      setError('Failed to set working location. Please try again.')
+      setLoading(false)
+    }
+  }
+
+  const handleLocationSubmit = (e) => {
+    e.preventDefault()
+    if (!selectedLocation) {
+      setError('Please select a location to work at today.')
+      return
+    }
+    selectLocationAndProceed(selectedLocation)
+  }
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
-      <div className="sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="flex justify-center">
-          <div className="bg-red-600 p-3 rounded-full">
-            <Shield className="h-8 w-8 text-white" />
+    <div className="admin-auth-container">
+      <div className="admin-auth-card">
+        <div className="admin-auth-header">
+          <div className="admin-auth-icon">
+            <Shield size={32} />
           </div>
+          <h1 className="admin-auth-title">Admin Portal</h1>
+          <p className="admin-auth-subtitle">Restaurant Management Dashboard</p>
         </div>
-        <h2 className="mt-6 text-center text-3xl font-extrabold text-white">
-          Admin Portal
-        </h2>
-        <p className="mt-2 text-center text-sm text-gray-300">
-          Restaurant management access
-        </p>
-      </div>
 
-      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="bg-white py-8 px-4 shadow-xl rounded-lg sm:px-10">
-          <form className="space-y-6" onSubmit={handleSubmit}>
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                <User className="inline h-4 w-4 mr-2" />
-                Email address
-              </label>
-              <div className="mt-1">
-                <input
-                  id="email"
-                  name="email"
-                  type="email"
-                  autoComplete="email"
-                  value={formData.email}
-                  onChange={handleChange}
-                  className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-red-500 focus:border-red-500 sm:text-sm"
-                />
-              </div>
+        {(error || authError) && (
+          <div className="error-message">
+            <Shield size={16} />
+            {error || authError}
+          </div>
+        )}
+
+        {loginStep === 'credentials' ? (
+          <form onSubmit={handleCredentialsSubmit} className="admin-form">
+            <div className="login-method-toggle">
+              <button
+                type="button"
+                className={`login-method-btn ${loginMethod === 'email' ? 'active' : ''}`}
+                onClick={() => setLoginMethod('email')}
+              >
+                <Mail size={16} />
+                Email
+              </button>
+              <button
+                type="button"
+                className={`login-method-btn ${loginMethod === 'phone' ? 'active' : ''}`}
+                onClick={() => setLoginMethod('phone')}
+              >
+                <Phone size={16} />
+                Phone
+              </button>
             </div>
 
-            <div>
-              <label htmlFor="phone" className="block text-sm font-medium text-gray-700">
-                <User className="inline h-4 w-4 mr-2" />
-                Phone number (alternative)
-              </label>
-              <div className="mt-1">
-                <input
-                  id="phone"
-                  name="phone"
-                  type="tel"
-                  autoComplete="tel"
-                  value={formData.phone}
-                  onChange={handleChange}
-                  className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-red-500 focus:border-red-500 sm:text-sm"
-                />
+            {loginMethod === 'email' ? (
+              <div className="form-group">
+                <label htmlFor="email" className="form-label">Email Address</label>
+                <div style={{ position: 'relative' }}>
+                  <Mail className="input-icon" size={20} />
+                  <input
+                    type="email"
+                    id="email"
+                    name="email"
+                    value={formData.email}
+                    onChange={handleChange}
+                    className="form-input"
+                    placeholder="admin@example.com"
+                    required
+                  />
+                </div>
               </div>
-            </div>
-
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                <Lock className="inline h-4 w-4 mr-2" />
-                Password
-              </label>
-              <div className="mt-1">
-                <input
-                  id="password"
-                  name="password"
-                  type="password"
-                  autoComplete="current-password"
-                  required
-                  value={formData.password}
-                  onChange={handleChange}
-                  className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-red-500 focus:border-red-500 sm:text-sm"
-                />
-              </div>
-            </div>
-
-            {(error || authError) && (
-              <div className="text-red-600 text-sm text-center bg-red-50 p-3 rounded-md">
-                {error || authError}
+            ) : (
+              <div className="form-group">
+                <label htmlFor="phone" className="form-label">Phone Number</label>
+                <div style={{ position: 'relative' }}>
+                  <Phone className="input-icon" size={20} />
+                  <input
+                    type="tel"
+                    id="phone"
+                    name="phone"
+                    value={formData.phone}
+                    onChange={handleChange}
+                    className="form-input"
+                    placeholder="(555) 123-4567"
+                    required
+                  />
+                </div>
               </div>
             )}
 
-            <div>
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50"
-              >
-                {loading ? 'Signing in...' : 'Access Dashboard'}
-              </button>
+            <div className="form-group">
+              <label htmlFor="password" className="form-label">Password</label>
+              <div style={{ position: 'relative' }}>
+                <Lock className="input-icon" size={20} />
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  id="password"
+                  name="password"
+                  value={formData.password}
+                  onChange={handleChange}
+                  className="form-input"
+                  placeholder="••••••••"
+                  required
+                />
+                <button
+                  type="button"
+                  className="password-toggle"
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                </button>
+              </div>
             </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="submit-btn"
+            >
+              {loading ? (
+                <>
+                  <div className="spinner"></div>
+                  Signing in...
+                </>
+              ) : (
+                <>
+                  <Shield size={20} />
+                  Access Dashboard
+                </>
+              )}
+            </button>
           </form>
-
-          <div className="mt-6 text-center">
-            <p className="text-sm text-gray-600">
-              Need admin access?{' '}
-              <Link to="/admin/register" className="font-medium text-red-600 hover:text-red-500">
-                Request admin account
-              </Link>
+        ) : (
+          <div className="location-selection">
+            <h2 className="location-selection-title">Choose Your Active Location</h2>
+            <p className="location-selection-subtitle">
+              Select which location you'll be managing today. You'll only receive orders for the selected location.
             </p>
-          </div>
 
-          <div className="mt-4 text-center">
-            <Link to="/" className="text-sm text-gray-500 hover:text-gray-700">
-              ← Back to main site
+            <div className="location-info-banner">
+              <MapPin size={20} />
+              <div>
+                <strong>Important:</strong> Orders will only be routed to your selected location. 
+                You can change this later from the dashboard.
+              </div>
+            </div>
+
+            <div className="location-list">
+              {userLocations.map((location) => (
+                <div
+                  key={location.location_id}
+                  className={`location-item ${selectedLocation === location.location_id ? 'selected' : ''}`}
+                  onClick={() => setSelectedLocation(location.location_id)}
+                >
+                  <div className={`location-icon ${location.type}`}>
+                    {location.type === 'food_truck' ? (
+                      <Truck size={20} />
+                    ) : (
+                      <Building size={20} />
+                    )}
+                  </div>
+                  <div className="location-details">
+                    <div className="location-name">{location.location_name}</div>
+                    <div className="location-description">
+                      {location.type === 'food_truck' ? 'Mobile Food Service' : 'Restaurant Location'}
+                    </div>
+                    <span className="location-role">{location.role}</span>
+                  </div>
+                  <div className="location-status">
+                    {selectedLocation === location.location_id && (
+                      <div className="active-indicator">
+                        <div className="pulse-dot"></div>
+                        Active
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <button
+              onClick={handleLocationSubmit}
+              disabled={!selectedLocation || loading}
+              className="submit-btn"
+            >
+              {loading ? (
+                <>
+                  <div className="spinner"></div>
+                  Setting up location...
+                </>
+              ) : (
+                <>
+                  <MapPin size={20} />
+                  Start Managing {selectedLocation && userLocations.find(l => l.location_id === selectedLocation)?.location_name}
+                </>
+              )}
+            </button>
+          </div>
+        )}
+
+        <div className="auth-footer">
+          <div className="auth-footer-links">
+            <Link to="/admin/register" className="auth-footer-link">
+              <User size={16} />
+              Request admin account
+            </Link>
+            <Link to="/" className="auth-footer-link">
+              <MapPin size={16} />
+              Back to main site
             </Link>
           </div>
         </div>
@@ -154,4 +314,4 @@ const AdminLoginPage = () => {
   )
 }
 
-export default AdminLoginPage 
+export default AdminLoginPage
