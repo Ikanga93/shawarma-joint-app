@@ -6,6 +6,7 @@ import {
   Menu as MenuIcon, 
   ShoppingBag, 
   Users, 
+  User,
   Edit3, 
   Save, 
   Plus, 
@@ -26,7 +27,22 @@ import {
   Edit2,
   XCircle,
   RotateCcw,
-  Trash
+  Trash,
+  UserPlus,
+  Search,
+  Filter,
+  TrendingUp,
+  Activity,
+  Star,
+  Heart,
+  MessageSquare,
+  DollarSign,
+  Gift,
+  RefreshCw,
+  Package,
+  X,
+  ChefHat,
+  BarChart3
 } from 'lucide-react'
 import { useBusinessConfig } from '../context/BusinessContext'
 import DashboardHeader from '../components/DashboardHeader'
@@ -71,6 +87,21 @@ const DashboardPage = ({ onLogout }) => {
     ordersByHour: []
   })
 
+  // Customer Management State
+  const [customers, setCustomers] = useState([])
+  const [customerSearchTerm, setCustomerSearchTerm] = useState('')
+  const [customerFilter, setCustomerFilter] = useState('all') // all, new, returning, vip
+  const [isLoadingCustomers, setIsLoadingCustomers] = useState(false)
+  const [selectedCustomerView, setSelectedCustomerView] = useState('grid') // grid, list
+  const [customerStats, setCustomerStats] = useState({
+    totalCustomers: 0,
+    newThisMonth: 0,
+    returningCustomers: 0,
+    vipCustomers: 0,
+    averageOrderValue: 0,
+    totalRevenue: 0
+  })
+
   // Order Management state
   const [selectedOrderStatus, setSelectedOrderStatus] = useState('all')
   const [allOrdersFilter, setAllOrdersFilter] = useState('all') // New filter state for All Orders tab
@@ -107,6 +138,7 @@ const DashboardPage = ({ onLogout }) => {
   const [showLocationModal, setShowLocationModal] = useState(false)
   const [showLiveLocationModal, setShowLiveLocationModal] = useState(false)
   const [showCustomerModal, setShowCustomerModal] = useState(false)
+  const [showCustomerDetailModal, setShowCustomerDetailModal] = useState(false)
 
   // Form states
   const [menuForm, setMenuForm] = useState({
@@ -174,7 +206,8 @@ const DashboardPage = ({ onLogout }) => {
         await Promise.all([
           loadOrders(),
           loadMenuItems(),
-          loadLocations()
+          loadLocations(),
+          loadCustomers() // Load customers independently
         ])
 
         // Load live locations (New functionality) - don't fail if this errors
@@ -187,14 +220,41 @@ const DashboardPage = ({ onLogout }) => {
 
         // Try to connect to Socket.IO for real-time updates (optional)
         try {
-          const newSocket = io(API_BASE_URL)
+          console.log('🔌 Attempting to connect to Socket.IO at:', API_BASE_URL)
+          const newSocket = io(API_BASE_URL, {
+            transports: ['websocket', 'polling'],
+            timeout: 10000,
+            reconnection: true,
+            reconnectionAttempts: 5,
+            reconnectionDelay: 1000
+          })
           setSocket(newSocket)
 
-          // Join admin room for real-time notifications
-          newSocket.emit('join-admin')
+          // Socket connection events
+          newSocket.on('connect', () => {
+            console.log('✅ Socket.IO connected successfully')
+            // Join admin room for real-time notifications
+            newSocket.emit('join-admin')
+            console.log('📡 Joined admin room for real-time updates')
+          })
+
+          newSocket.on('connect_error', (error) => {
+            console.error('❌ Socket.IO connection error:', error)
+          })
+
+          newSocket.on('disconnect', (reason) => {
+            console.warn('⚠️ Socket.IO disconnected:', reason)
+          })
+
+          newSocket.on('reconnect', (attemptNumber) => {
+            console.log('🔄 Socket.IO reconnected after', attemptNumber, 'attempts')
+            // Re-join admin room after reconnection
+            newSocket.emit('join-admin')
+          })
 
           // Listen for real-time order updates
           newSocket.on('orderUpdate', (updatedOrder) => {
+            console.log('📊 Received order update via socket:', updatedOrder.id)
             setOrders(prevOrders =>
               prevOrders.map(order =>
                 order.id === updatedOrder.id ? updatedOrder : order
@@ -204,11 +264,30 @@ const DashboardPage = ({ onLogout }) => {
 
           // Listen for new orders
           newSocket.on('new-order', (newOrder) => {
-            setOrders(prevOrders => [newOrder, ...prevOrders])
+            console.log('🆕 Received new order via socket:', newOrder.id, newOrder.customer_name)
+            setOrders(prevOrders => {
+              // Check if order already exists to prevent duplicates
+              const existingOrder = prevOrders.find(order => order.id === newOrder.id)
+              if (existingOrder) {
+                console.log('⚠️ Order already exists, updating instead of adding')
+                return prevOrders.map(order =>
+                  order.id === newOrder.id ? newOrder : order
+                )
+              }
+              console.log('✅ Adding new order to dashboard')
+              return [newOrder, ...prevOrders]
+            })
+            
+            // Also recalculate analytics with the new order
+            setTimeout(() => {
+              calculateCustomerAnalytics([newOrder, ...orders])
+              calculateOrderAnalytics([newOrder, ...orders])
+            }, 100)
           })
 
           // Listen for order status updates  
           newSocket.on('order-updated', (updatedOrder) => {
+            console.log('🔄 Received order status update via socket:', updatedOrder.id, updatedOrder.status)
             setOrders(prevOrders =>
               prevOrders.map(order =>
                 order.id === updatedOrder.id ? updatedOrder : order
@@ -218,12 +297,23 @@ const DashboardPage = ({ onLogout }) => {
 
           // Listen for order deletions
           newSocket.on('orderDeleted', (deletedOrderId) => {
+            console.log('🗑️ Received order deletion via socket:', deletedOrderId)
             setOrders(prevOrders =>
               prevOrders.filter(order => order.id !== deletedOrderId)
             )
           })
+
+          // Test socket connection
+          setTimeout(() => {
+            if (newSocket.connected) {
+              console.log('✅ Socket.IO connection verified - real-time updates active')
+            } else {
+              console.warn('⚠️ Socket.IO not connected - orders may not update automatically')
+            }
+          }, 2000)
+
         } catch (socketError) {
-          console.warn('Socket.IO connection failed, continuing without real-time updates:', socketError)
+          console.warn('❌ Socket.IO connection failed, continuing without real-time updates:', socketError)
         }
 
         setError(null)
@@ -259,39 +349,52 @@ const DashboardPage = ({ onLogout }) => {
   }
 
   // Load functions
-  const loadOrders = async () => {
+  const loadOrders = async (showLoadingIndicator = true) => {
     try {
+      if (showLoadingIndicator) {
+        setIsLoadingOrders(true)
+      }
       console.log('🔄 Loading orders from API...')
       
-      let ordersData
-      if (currentLocation && selectedLocationFilter === 'current') {
-        // Load orders for current location only
-        ordersData = await ApiService.getLocationOrders(currentLocation.id)
-      } else {
-        // Load all orders
-        ordersData = await ApiService.getOrders()
-      }
+      const ordersData = await ApiService.getOrders()
       
-      console.log('✅ Orders loaded successfully:', {
-        count: ordersData.length,
-        sample: ordersData[0],
-        allOrderIds: ordersData.map(o => o.id),
-        location: currentLocation?.name || 'All locations'
-      })
-      setOrders(ordersData)
+      console.log('📊 Orders loaded:', ordersData?.length || 0)
+      console.log('📋 Sample order:', ordersData?.[0])
+      
+      setOrders(ordersData || [])
+      
+      // Calculate analytics from orders
+      calculateCustomerAnalytics(ordersData || [])
+      calculateOrderAnalytics(ordersData || [])
+      
+      // No longer need to trigger customer loading here since it's loaded independently
     } catch (error) {
       console.error('❌ Error loading orders:', error)
-      if (error.message.includes('authentication') || error.message.includes('401')) {
-        console.log('🔐 Authentication error - redirecting to login')
-        navigate('/admin/login')
-      } else {
-        console.error('📡 API Error details:', error)
-        setOrders([]) // Set empty array on error to prevent crashes
-      }
+      setError('Failed to load orders. Please try again.')
     } finally {
-      setIsLoadingOrders(false)
+      if (showLoadingIndicator) {
+        setIsLoadingOrders(false)
+      }
     }
   }
+
+  // Manual refresh function
+  const handleRefreshOrders = async () => {
+    console.log('🔄 Manual refresh triggered')
+    await loadOrders(true)
+  }
+
+  // Set up automatic refresh every 30 seconds as backup
+  useEffect(() => {
+    const refreshInterval = setInterval(() => {
+      if (!socket || !socket.connected) {
+        console.log('🔄 Socket not connected, auto-refreshing orders...')
+        loadOrders(false) // Don't show loading indicator for background refresh
+      }
+    }, 30000) // 30 seconds
+
+    return () => clearInterval(refreshInterval)
+  }, [socket])
 
   const loadMenuItems = async () => {
     try {
@@ -333,138 +436,308 @@ const DashboardPage = ({ onLogout }) => {
     }
   }
 
-  // Analytics calculation functions
+  // Calculate customer analytics from orders
   const calculateCustomerAnalytics = (orders) => {
-    console.log('🔍 calculateCustomerAnalytics called with orders:', orders.length)
-    console.log('📊 Sample order structure:', orders[0])
+    const registeredCustomers = new Map() // customers with user_id
+    const guestCustomers = new Map() // customers without user_id
+    const oneMonthAgo = new Date()
+    oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1)
     
-    if (!orders || orders.length === 0) {
-      console.log('⚠️ No orders provided to calculateCustomerAnalytics')
-      // Don't reset customer database when no orders - customers should persist
-      const customers = Array.from(customerDatabase.values())
-      setCustomerAnalytics({
-        totalCustomers: customers.length,
-        newCustomers: 0,
-        returningCustomers: 0,
-        topCustomers: customers.sort((a, b) => b.totalSpent - a.totalSpent).slice(0, 10)
-      })
-      return
-    }
+    const threeMonthsAgo = new Date()
+    threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3)
     
-    // Start with existing customer database to preserve customers
-    const updatedCustomerMap = new Map(customerDatabase)
-    const thirtyDaysAgo = new Date()
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
-
-    let processedOrders = 0
-    let skippedOrders = 0
-
-    // Reset order counts and spending for recalculation
-    updatedCustomerMap.forEach(customer => {
-      customer.totalOrders = 0
-      customer.totalSpent = 0
-    })
-
-    orders.forEach((order, index) => {
-      console.log(`🔄 Processing order ${index + 1}/${orders.length}:`, {
-        id: order.id,
-        order_time: order.order_time,
-        order_date: order.order_date,
-        orderTime: order.orderTime,
-        customer_email: order.customer_email,
-        customer_phone: order.customer_phone,
-        customer_name: order.customer_name,
-        total_amount: order.total_amount,
-        status: order.status
-      })
-
-      // Try different date field names
-      const orderTimeField = order.order_time || order.order_date || order.orderTime
+    const sixMonthsAgo = new Date()
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6)
+    
+    // Process orders to build customer database
+    orders.forEach(order => {
+      const orderDate = new Date(order.created_at || order.order_time)
       
-      // Skip orders without valid order_time or customer identifier
-      if (!orderTimeField || (!order.customer_email && !order.customer_phone)) {
-        console.log(`⏭️ Skipping order ${index + 1}: missing order_time or customer info`)
-        skippedOrders++
-        return
-      }
-
-      let orderDate
-      try {
-        orderDate = new Date(orderTimeField)
-        // Check if date is valid
-        if (isNaN(orderDate.getTime())) {
-          console.warn('❌ Invalid order_time format:', orderTimeField)
-          skippedOrders++
-          return
+      if (order.user_id && order.user_id !== '') {
+        // This is a registered customer order
+        const customerId = order.user_id
+        
+        if (!registeredCustomers.has(customerId)) {
+          registeredCustomers.set(customerId, {
+            id: customerId,
+            name: order.customer_name,
+            email: order.customer_email,
+            phone: order.customer_phone,
+            firstOrderDate: orderDate,
+            lastOrderDate: orderDate,
+            totalOrders: 0,
+            totalSpent: 0,
+            orders: [],
+            isNew: orderDate > oneMonthAgo,
+            isRegistered: true,
+            favoriteItems: new Map(),
+            preferredLocations: new Map(),
+            ordersByMonth: new Map(),
+            averageOrderValue: 0,
+            daysSinceLastOrder: 0,
+            orderFrequency: 0,
+            preferredOrderTime: null,
+            seasonality: {
+              spring: 0, summer: 0, fall: 0, winter: 0
+            },
+            lifecycle: 'new',
+            retentionScore: 0
+          })
         }
-      } catch (error) {
-        console.warn('❌ Error parsing order_time:', orderTimeField, error)
-        skippedOrders++
-        return
+        
+        const customer = registeredCustomers.get(customerId)
+        customer.totalOrders += 1
+        customer.totalSpent += parseFloat(order.total_amount)
+        customer.orders.push(order)
+        customer.lastOrderDate = orderDate > customer.lastOrderDate ? orderDate : customer.lastOrderDate
+        
+        // Update customer info with latest order data (in case profile was incomplete)
+        if (order.customer_name && !customer.name) customer.name = order.customer_name
+        if (order.customer_email && !customer.email) customer.email = order.customer_email
+        if (order.customer_phone && !customer.phone) customer.phone = order.customer_phone
+        
+        // Track favorite items
+        if (order.items && Array.isArray(order.items)) {
+          order.items.forEach(item => {
+            const itemName = item.name
+            const currentCount = customer.favoriteItems.get(itemName) || 0
+            customer.favoriteItems.set(itemName, currentCount + item.quantity)
+          })
+        }
+        
+        // Track preferred locations
+        if (order.location_name) {
+          const currentCount = customer.preferredLocations.get(order.location_name) || 0
+          customer.preferredLocations.set(order.location_name, currentCount + 1)
+        }
+        
+        // Track orders by month for trend analysis
+        const monthKey = `${orderDate.getFullYear()}-${orderDate.getMonth()}`
+        const monthCount = customer.ordersByMonth.get(monthKey) || 0
+        customer.ordersByMonth.set(monthKey, monthCount + 1)
+        
+        // Track seasonality
+        const month = orderDate.getMonth()
+        if (month >= 2 && month <= 4) customer.seasonality.spring++
+        else if (month >= 5 && month <= 7) customer.seasonality.summer++
+        else if (month >= 8 && month <= 10) customer.seasonality.fall++
+        else customer.seasonality.winter++
+        
+      } else {
+        // This is a guest customer order (no user_id)
+        const customerId = order.customer_phone || order.customer_email || `${order.customer_name}-${order.id}`
+        
+        if (!guestCustomers.has(customerId)) {
+          guestCustomers.set(customerId, {
+            id: customerId,
+            name: order.customer_name,
+            email: order.customer_email,
+            phone: order.customer_phone,
+            firstOrderDate: orderDate,
+            lastOrderDate: orderDate,
+            totalOrders: 0,
+            totalSpent: 0,
+            orders: [],
+            isNew: orderDate > oneMonthAgo,
+            isRegistered: false,
+            favoriteItems: new Map(),
+            preferredLocations: new Map(),
+            ordersByMonth: new Map(),
+            averageOrderValue: 0,
+            daysSinceLastOrder: 0,
+            orderFrequency: 0,
+            preferredOrderTime: null,
+            seasonality: {
+              spring: 0, summer: 0, fall: 0, winter: 0
+            },
+            lifecycle: 'new',
+            retentionScore: 0
+          })
+        }
+        
+        const customer = guestCustomers.get(customerId)
+        customer.totalOrders += 1
+        customer.totalSpent += parseFloat(order.total_amount)
+        customer.orders.push(order)
+        customer.lastOrderDate = orderDate > customer.lastOrderDate ? orderDate : customer.lastOrderDate
+        
+        // Track favorite items
+        if (order.items && Array.isArray(order.items)) {
+          order.items.forEach(item => {
+            const itemName = item.name
+            const currentCount = customer.favoriteItems.get(itemName) || 0
+            customer.favoriteItems.set(itemName, currentCount + item.quantity)
+          })
+        }
+        
+        // Track preferred locations
+        if (order.location_name) {
+          const currentCount = customer.preferredLocations.get(order.location_name) || 0
+          customer.preferredLocations.set(order.location_name, currentCount + 1)
+        }
+        
+        // Track orders by month for trend analysis
+        const monthKey = `${orderDate.getFullYear()}-${orderDate.getMonth()}`
+        const monthCount = customer.ordersByMonth.get(monthKey) || 0
+        customer.ordersByMonth.set(monthKey, monthCount + 1)
+        
+        // Track seasonality
+        const month = orderDate.getMonth()
+        if (month >= 2 && month <= 4) customer.seasonality.spring++
+        else if (month >= 5 && month <= 7) customer.seasonality.summer++
+        else if (month >= 8 && month <= 10) customer.seasonality.fall++
+        else customer.seasonality.winter++
       }
-
-      const customerKey = order.customer_email || order.customer_phone
-      
-      if (!updatedCustomerMap.has(customerKey)) {
-        updatedCustomerMap.set(customerKey, {
-          name: order.customer_name || 'Unknown Customer',
-          email: order.customer_email,
-          phone: order.customer_phone,
-          firstOrder: orderDate,
-          totalOrders: 0,
-          totalSpent: 0,
-          isNew: orderDate >= thirtyDaysAgo
-        })
-      }
-      
-      const customer = updatedCustomerMap.get(customerKey)
-      customer.totalOrders += 1
-      customer.totalSpent += parseFloat(order.total_amount) || 0
-      
-      // Update customer info if it's more complete
-      if (!customer.name || customer.name === 'Unknown Customer') {
-        customer.name = order.customer_name || customer.name
-      }
-      if (!customer.email && order.customer_email) {
-        customer.email = order.customer_email
-      }
-      if (!customer.phone && order.customer_phone) {
-        customer.phone = order.customer_phone
-      }
-      
-      if (orderDate < customer.firstOrder) {
-        customer.firstOrder = orderDate
-        customer.isNew = orderDate >= thirtyDaysAgo
-      }
-      
-      processedOrders++
     })
-
-    const customers = Array.from(updatedCustomerMap.values())
-    const newCustomers = customers.filter(c => c.isNew).length
-    const returningCustomers = customers.filter(c => c.totalOrders > 1).length
-    const topCustomers = customers
+    
+    // Calculate derived metrics for all customers
+    const allCustomers = [...registeredCustomers.values(), ...guestCustomers.values()]
+    
+    allCustomers.forEach((customer) => {
+      // Average order value
+      customer.averageOrderValue = customer.totalSpent / customer.totalOrders
+      
+      // Days since last order
+      const now = new Date()
+      customer.daysSinceLastOrder = Math.floor((now - customer.lastOrderDate) / (1000 * 60 * 60 * 24))
+      
+      // Order frequency (orders per month)
+      const daysSinceFirst = Math.floor((now - customer.firstOrderDate) / (1000 * 60 * 60 * 24))
+      const monthsSinceFirst = Math.max(1, daysSinceFirst / 30)
+      customer.orderFrequency = customer.totalOrders / monthsSinceFirst
+      
+      // Preferred order time (most common hour)
+      const hourCounts = new Map()
+      customer.orders.forEach(order => {
+        const hour = new Date(order.created_at || order.order_time).getHours()
+        hourCounts.set(hour, (hourCounts.get(hour) || 0) + 1)
+      })
+      if (hourCounts.size > 0) {
+        const mostCommonHour = Array.from(hourCounts.entries()).sort((a, b) => b[1] - a[1])[0][0]
+        customer.preferredOrderTime = `${mostCommonHour}:00`
+      }
+      
+      // Customer lifecycle determination
+      if (customer.totalSpent > 200) {
+        customer.lifecycle = 'vip'
+      } else if (customer.daysSinceLastOrder > 90) {
+        customer.lifecycle = 'churned'
+      } else if (customer.daysSinceLastOrder > 30) {
+        customer.lifecycle = 'at_risk'
+      } else if (customer.totalOrders > 1) {
+        customer.lifecycle = 'active'
+      } else {
+        customer.lifecycle = 'new'
+      }
+      
+      // Retention score (0-100)
+      let score = 0
+      if (customer.totalOrders > 1) score += 20
+      if (customer.totalOrders > 5) score += 20
+      if (customer.daysSinceLastOrder < 30) score += 30
+      if (customer.orderFrequency > 1) score += 20
+      if (customer.totalSpent > 100) score += 10
+      customer.retentionScore = score
+    })
+    
+    // Update customer database state
+    setCustomerDatabase(new Map([...registeredCustomers, ...guestCustomers]))
+    
+    // Sort by total spent
+    const topCustomers = allCustomers
       .sort((a, b) => b.totalSpent - a.totalSpent)
       .slice(0, 10)
-
-    console.log('📈 Customer analytics calculated:', {
-      totalOrders: orders.length,
-      processedOrders,
-      skippedOrders,
-      totalCustomers: customers.length,
+    
+    const totalCustomers = allCustomers.length
+    const registeredCustomersCount = registeredCustomers.size
+    const guestCustomersCount = guestCustomers.size
+    const newCustomers = allCustomers.filter(c => c.isNew).length
+    const returningCustomers = allCustomers.filter(c => c.totalOrders > 1).length
+    const vipCustomers = allCustomers.filter(c => c.lifecycle === 'vip').length
+    const atRiskCustomers = allCustomers.filter(c => c.lifecycle === 'at_risk').length
+    const churnedCustomers = allCustomers.filter(c => c.lifecycle === 'churned').length
+    
+    // Calculate advanced metrics
+    const totalRevenue = allCustomers.reduce((sum, customer) => sum + customer.totalSpent, 0)
+    const averageCustomerValue = totalRevenue / totalCustomers || 0
+    const averageOrdersPerCustomer = allCustomers.reduce((sum, c) => sum + c.totalOrders, 0) / totalCustomers || 0
+    const highValueCustomers = allCustomers.filter(c => c.totalSpent > 100).length
+    const activeCustomers = allCustomers.filter(c => c.daysSinceLastOrder < 30).length
+    
+    const analytics = {
+      totalCustomers,
+      registeredCustomersCount,
+      guestCustomersCount,
       newCustomers,
       returningCustomers,
-      topCustomers: topCustomers.length,
-      sampleCustomer: customers[0]
-    })
-
-    setCustomerAnalytics({
-      totalCustomers: customers.length,
-      newCustomers,
+      vipCustomers,
+      atRiskCustomers,
+      churnedCustomers,
+      highValueCustomers,
+      activeCustomers,
+      averageCustomerValue,
+      averageOrdersPerCustomer,
+      totalRevenue,
+      topCustomers: topCustomers.map(customer => ({
+        id: customer.id,
+        name: customer.name,
+        email: customer.email,
+        phone: customer.phone,
+        totalSpent: customer.totalSpent,
+        totalOrders: customer.totalOrders,
+        lastOrderDate: customer.lastOrderDate,
+        lifecycle: customer.lifecycle,
+        retentionScore: customer.retentionScore,
+        daysSinceLastOrder: customer.daysSinceLastOrder,
+        orderFrequency: customer.orderFrequency,
+        preferredOrderTime: customer.preferredOrderTime,
+        isRegistered: customer.isRegistered,
+        favoriteItem: customer.favoriteItems.size > 0 
+          ? Array.from(customer.favoriteItems.entries()).sort((a, b) => b[1] - a[1])[0][0]
+          : 'N/A',
+        preferredLocation: customer.preferredLocations.size > 0
+          ? Array.from(customer.preferredLocations.entries()).sort((a, b) => b[1] - a[1])[0][0]
+          : 'N/A'
+      }))
+    }
+    
+    setCustomerAnalytics(analytics)
+    
+    // Also update customers state for the customer tab (use the comprehensive customer list)
+    setCustomers(allCustomers)
+    
+    // Calculate customer stats with enhanced metrics
+    const averageOrderValue = totalRevenue / orders.length || 0
+    
+    setCustomerStats({
+      totalCustomers,
+      registeredCustomersCount,
+      guestCustomersCount,
+      newThisMonth: newCustomers,
       returningCustomers,
-      topCustomers
+      vipCustomers,
+      atRiskCustomers,
+      churnedCustomers,
+      highValueCustomers,
+      activeCustomers,
+      averageOrderValue,
+      averageCustomerValue,
+      averageOrdersPerCustomer,
+      totalRevenue
     })
-    setCustomerDatabase(updatedCustomerMap)
+    
+    console.log('📊 Customer Analytics Updated:', {
+      total: totalCustomers,
+      registered: registeredCustomersCount,
+      guest: guestCustomersCount,
+      new: newCustomers,
+      returning: returningCustomers,
+      vip: vipCustomers,
+      atRisk: atRiskCustomers,
+      active: activeCustomers
+    })
+    
+    return analytics
   }
 
   const calculateOrderAnalytics = (orders) => {
@@ -473,15 +746,11 @@ const DashboardPage = ({ onLogout }) => {
     const totalRevenue = orders.reduce((sum, order) => sum + (parseFloat(order.total_amount) || 0), 0)
     const averageOrderValue = orders.length > 0 ? totalRevenue / orders.length : 0
     
-    console.log('💸 Revenue calculated:', { totalRevenue, averageOrderValue })
-    
     // Orders by status
     const ordersByStatus = orders.reduce((acc, order) => {
       acc[order.status] = (acc[order.status] || 0) + 1
       return acc
     }, {})
-
-    console.log('📊 Orders by status:', ordersByStatus)
 
     // Popular items
     const itemMap = new Map()
@@ -503,12 +772,7 @@ const DashboardPage = ({ onLogout }) => {
       .sort((a, b) => b.quantity - a.quantity)
       .slice(0, 10)
 
-    console.log('📈 Popular items calculated:', popularItems.length)
-
     // Revenue by day (last 7 days)
-    const sevenDaysAgo = new Date()
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
-    
     const revenueByDay = []
     for (let i = 6; i >= 0; i--) {
       const date = new Date()
@@ -517,13 +781,11 @@ const DashboardPage = ({ onLogout }) => {
       
       const dayOrders = orders.filter(order => {
         try {
-          // Try different date field names
           const orderTimeField = order.order_time || order.order_date || order.orderTime
           if (!orderTimeField) return false
           const orderDate = new Date(orderTimeField)
           return orderDate.toISOString().split('T')[0] === dateStr
         } catch (error) {
-          console.warn('❌ Error parsing order_time:', order.order_time, error)
           return false
         }
       })
@@ -536,27 +798,20 @@ const DashboardPage = ({ onLogout }) => {
       })
     }
 
-    console.log('📊 Revenue by day calculated:', revenueByDay)
-
     // Orders by hour
     const ordersByHour = Array.from({ length: 24 }, (_, hour) => ({
       hour,
       count: orders.filter(order => {
         try {
-          // Try different date field names
           const orderTimeField = order.order_time || order.order_date || order.orderTime
           if (!orderTimeField) return false
-          
           const orderHour = new Date(orderTimeField).getHours()
           return orderHour === hour
         } catch (error) {
-          console.warn('❌ Invalid order_time format:', order.order_time)
           return false
         }
       }).length
     }))
-
-    console.log('📊 Orders by hour calculated')
 
     setOrderAnalytics({
       totalRevenue,
@@ -570,16 +825,12 @@ const DashboardPage = ({ onLogout }) => {
 
   // Recalculate analytics when orders change
   useEffect(() => {
-    console.log('🔄 Analytics useEffect triggered. Orders:', orders.length)
-    console.log('📊 Sample order data:', orders[0])
-    
     if (orders.length > 0) {
       try {
         calculateCustomerAnalytics(orders)
         calculateOrderAnalytics(orders)
       } catch (error) {
         console.error('❌ Error calculating analytics:', error)
-        // Set default values to prevent crashes
         setCustomerAnalytics({
           totalCustomers: 0,
           newCustomers: 0,
@@ -596,8 +847,6 @@ const DashboardPage = ({ onLogout }) => {
         })
       }
     } else {
-      console.log('⚠️ No orders available for analytics')
-      // Initialize with empty state when no orders
       setCustomerAnalytics({
         totalCustomers: 0,
         newCustomers: 0,
@@ -1066,19 +1315,6 @@ const DashboardPage = ({ onLogout }) => {
     setLoadingCustomerOrders(false)
   }
 
-  const sendEmailToCustomer = (customerEmail) => {
-    if (!customerEmail) {
-      alert('No email address available for this customer')
-      return
-    }
-    
-    const subject = encodeURIComponent("Message from Mo's Burritos Restaurant")
-    const body = encodeURIComponent("Dear valued customer,\n\nThank you for choosing Mo's Burritos Restaurant!\n\nBest regards,\nMo's Burritos Team")
-    const mailtoLink = `mailto:${customerEmail}?subject=${subject}&body=${body}`
-    
-    window.open(mailtoLink, '_blank')
-  }
-
   // Order Management Functions
   const handleDeleteOrder = async (orderId, orderDetails) => {
     const confirmMessage = `Are you sure you want to delete Order #${orderId}?\n\nCustomer: ${orderDetails.customer_name}\nTotal: $${(parseFloat(orderDetails.total_amount) || 0).toFixed(2)}\n\nThis action cannot be undone.`
@@ -1323,6 +1559,17 @@ const DashboardPage = ({ onLogout }) => {
       <div className="order-management-section">
         <div className="section-header">
           <h2>Order Management</h2>
+          <div className="section-header-actions">
+            <button 
+              className="btn-refresh"
+              onClick={handleRefreshOrders}
+              disabled={isLoadingOrders}
+              title="Refresh orders"
+            >
+              <RefreshCw size={18} className={isLoadingOrders ? 'spinning' : ''} />
+              {isLoadingOrders ? 'Refreshing...' : 'Refresh'}
+            </button>
+          </div>
           <p>Manage orders by status for efficient workflow</p>
         </div>
 
@@ -1912,14 +2159,25 @@ const DashboardPage = ({ onLogout }) => {
       <div className="orders-section">
         <div className="section-header">
           <h2>All Orders</h2>
-          {allOrdersFilter !== 'all' && (
+          <div className="section-header-actions">
             <button 
-              className="btn-clear-filter"
-              onClick={() => setAllOrdersFilter('all')}
+              className="btn-refresh"
+              onClick={handleRefreshOrders}
+              disabled={isLoadingOrders}
+              title="Refresh orders"
             >
-              Clear Filter
+              <RefreshCw size={18} className={isLoadingOrders ? 'spinning' : ''} />
+              {isLoadingOrders ? 'Refreshing...' : 'Refresh'}
             </button>
-          )}
+            {allOrdersFilter !== 'all' && (
+              <button 
+                className="btn-clear-filter"
+                onClick={() => setAllOrdersFilter('all')}
+              >
+                Clear Filter
+              </button>
+            )}
+          </div>
         </div>
 
         <div className="order-stats">
@@ -2107,6 +2365,8 @@ const DashboardPage = ({ onLogout }) => {
         return renderOrderManagementTab()
       case 'orders':
         return renderOrdersTab()
+      case 'customers':
+        return renderCustomersTab()
       case 'menu':
         return renderMenuTab()
       case 'locations':
@@ -2118,6 +2378,719 @@ const DashboardPage = ({ onLogout }) => {
       default:
         return null
     }
+  }
+
+  // Customer Management Tab Render Function
+  const renderCustomersTab = () => {
+    const filteredCustomers = getFilteredCustomers()
+
+    return (
+      <div className="customers-section">
+        <div className="section-header">
+          <h2>Customer Management</h2>
+          <div className="customer-actions">
+            <div className="view-toggle">
+              <button 
+                className={`view-btn ${selectedCustomerView === 'grid' ? 'active' : ''}`}
+                onClick={() => setSelectedCustomerView('grid')}
+              >
+                Grid
+              </button>
+              <button 
+                className={`view-btn ${selectedCustomerView === 'list' ? 'active' : ''}`}
+                onClick={() => setSelectedCustomerView('list')}
+              >
+                List
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Customer Stats Overview */}
+        <div className="customer-stats-overview">
+          <div className="stats-grid">
+            <div className="stat-card">
+              <div className="stat-icon">
+                <Users size={32} />
+              </div>
+              <div className="stat-content">
+                <h3>Total Customers</h3>
+                <div className="stat-value">{customerStats.totalCustomers}</div>
+                <small>{customerStats.registeredCustomersCount || 0} registered • {customerStats.guestCustomersCount || 0} guest</small>
+              </div>
+            </div>
+            <div className="stat-card">
+              <div className="stat-icon">
+                <UserPlus size={32} />
+              </div>
+              <div className="stat-content">
+                <h3>New This Month</h3>
+                <div className="stat-value">{customerStats.newThisMonth}</div>
+              </div>
+            </div>
+            <div className="stat-card">
+              <div className="stat-icon">
+                <Heart size={32} />
+              </div>
+              <div className="stat-content">
+                <h3>Returning</h3>
+                <div className="stat-value">{customerStats.returningCustomers}</div>
+              </div>
+            </div>
+            <div className="stat-card">
+              <div className="stat-icon">
+                <Star size={32} />
+              </div>
+              <div className="stat-content">
+                <h3>VIP Customers</h3>
+                <div className="stat-value">{customerStats.vipCustomers}</div>
+              </div>
+            </div>
+            <div className="stat-card">
+              <div className="stat-icon">
+                <TrendingUp size={32} />
+              </div>
+              <div className="stat-content">
+                <h3>Avg Order Value</h3>
+                <div className="stat-value">${customerStats.averageOrderValue.toFixed(2)}</div>
+              </div>
+            </div>
+            <div className="stat-card">
+              <div className="stat-icon">
+                <Activity size={32} />
+              </div>
+              <div className="stat-content">
+                <h3>Total Revenue</h3>
+                <div className="stat-value">${customerStats.totalRevenue.toFixed(2)}</div>
+              </div>
+            </div>
+            <div className="stat-card at-risk">
+              <div className="stat-icon">
+                <AlertCircle size={32} />
+              </div>
+              <div className="stat-content">
+                <h3>At Risk</h3>
+                <div className="stat-value">{customerStats.atRiskCustomers || 0}</div>
+                <small>Customers who haven't ordered in 30+ days</small>
+              </div>
+            </div>
+            <div className="stat-card active">
+              <div className="stat-icon">
+                <CheckCircle size={32} />
+              </div>
+              <div className="stat-content">
+                <h3>Active Customers</h3>
+                <div className="stat-value">{customerStats.activeCustomers || 0}</div>
+                <small>Ordered within last 30 days</small>
+              </div>
+            </div>
+            <div className="stat-card high-value">
+              <div className="stat-icon">
+                <Target size={32} />
+              </div>
+              <div className="stat-content">
+                <h3>High Value</h3>
+                <div className="stat-value">{customerStats.highValueCustomers || 0}</div>
+                <small>$100+ lifetime spending</small>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Search and Filters */}
+        <div className="customer-controls">
+          <div className="search-section">
+            <div className="search-box">
+              <Search size={20} />
+              <input
+                type="text"
+                placeholder="Search customers by name, email, or phone..."
+                value={customerSearchTerm}
+                onChange={(e) => setCustomerSearchTerm(e.target.value)}
+                className="search-input"
+              />
+            </div>
+          </div>
+          
+          <div className="filter-section">
+            <Filter size={20} />
+            <select 
+              value={customerFilter} 
+              onChange={(e) => setCustomerFilter(e.target.value)}
+              className="filter-select"
+            >
+              <option value="all">All Customers</option>
+              <option value="new">New Customers</option>
+              <option value="active">Active Customers</option>
+              <option value="returning">Returning</option>
+              <option value="vip">VIP Customers</option>
+              <option value="at_risk">At Risk</option>
+              <option value="churned">Churned</option>
+              <option value="registered">Registered Only</option>
+              <option value="guest">Guest Only</option>
+              <option value="no_orders">No Orders Yet</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Customer List/Grid */}
+        {isLoadingCustomers ? (
+          <div className="loading-container">
+            <div className="loading-spinner"></div>
+            <p>Loading customers...</p>
+          </div>
+        ) : filteredCustomers.length === 0 ? (
+          <div className="empty-state">
+            <Users size={64} />
+            <h3>No customers found</h3>
+            <p>
+              {customerSearchTerm || customerFilter !== 'all' 
+                ? 'Try adjusting your search or filter criteria.'
+                : 'Customers will appear here as orders are placed.'
+              }
+            </p>
+          </div>
+        ) : (
+          <div className={`customers-container ${selectedCustomerView}`}>
+            {selectedCustomerView === 'grid' ? (
+              <div className="customers-grid">
+                {filteredCustomers.map((customer) => {
+                  const segment = getCustomerSegment(customer)
+                  const segmentColor = getCustomerSegmentColor(segment)
+                  const favoriteItem = customer.favoriteItems.size > 0 
+                    ? Array.from(customer.favoriteItems.entries()).sort((a, b) => b[1] - a[1])[0][0]
+                    : 'None'
+                  const preferredLocation = customer.preferredLocations.size > 0
+                    ? Array.from(customer.preferredLocations.entries()).sort((a, b) => b[1] - a[1])[0][0]
+                    : 'None'
+
+                  return (
+                    <div 
+                      key={customer.id} 
+                      className="customer-card"
+                      onClick={() => openCustomerDetailModal(customer)}
+                    >
+                      <div className="customer-header">
+                        <div className="customer-avatar">
+                          <User size={24} />
+                        </div>
+                        <div 
+                          className="customer-segment"
+                          style={{ backgroundColor: segmentColor }}
+                        >
+                          {segment}
+                        </div>
+                      </div>
+                      
+                      <div className="customer-info">
+                        <h4>{customer.name}</h4>
+                        <p className="customer-contact">
+                          {customer.email && <span><Mail size={14} /> {customer.email}</span>}
+                          {customer.phone && <span><Phone size={14} /> {customer.phone}</span>}
+                        </p>
+                        <div className="customer-type">
+                          <span className={`type-badge ${customer.isRegistered ? 'registered' : 'guest'}`}>
+                            {customer.isRegistered ? '👤 Registered' : '👥 Guest'}
+                          </span>
+                        </div>
+                      </div>
+                      
+                      <div className="customer-stats">
+                        <div className="stat-row">
+                          <span className="stat-label">Orders:</span>
+                          <span className="stat-value">{customer.totalOrders}</span>
+                        </div>
+                        <div className="stat-row">
+                          <span className="stat-label">Total Spent:</span>
+                          <span className="stat-value">${customer.totalSpent.toFixed(2)}</span>
+                        </div>
+                        {customer.totalOrders > 0 ? (
+                          <>
+                            <div className="stat-row">
+                              <span className="stat-label">Favorite:</span>
+                              <span className="stat-value">{favoriteItem}</span>
+                            </div>
+                            <div className="stat-row">
+                              <span className="stat-label">Location:</span>
+                              <span className="stat-value">{preferredLocation}</span>
+                            </div>
+                          </>
+                        ) : (
+                          <div className="stat-row">
+                            <span className="stat-label">Status:</span>
+                            <span className="stat-value">No orders yet</span>
+                          </div>
+                        )}
+                      </div>
+                      
+                      <div className="customer-footer">
+                        <span className="customer-since">
+                          {customer.isRegistered 
+                            ? `Registered ${formatCustomerSince(customer.registeredDate)}`
+                            : customer.totalOrders > 0 
+                              ? `Customer since ${formatCustomerSince(customer.firstOrderDate)}`
+                              : 'New customer'
+                          }
+                        </span>
+                        <div className="customer-actions">
+                          {customer.email && (
+                            <button 
+                              className="btn-email-mini"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                sendEmailToCustomer(customer.email)
+                              }}
+                              title="Send Email"
+                            >
+                              <Mail size={14} />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            ) : (
+              <div className="customers-list">
+                <div className="list-header">
+                  <div className="col-customer">Customer</div>
+                  <div className="col-segment">Segment</div>
+                  <div className="col-orders">Orders</div>
+                  <div className="col-spent">Total Spent</div>
+                  <div className="col-favorite">Favorite Item</div>
+                  <div className="col-location">Preferred Location</div>
+                  <div className="col-since">Customer Since</div>
+                  <div className="col-actions">Actions</div>
+                </div>
+                
+                {filteredCustomers.map((customer) => {
+                  const segment = getCustomerSegment(customer)
+                  const segmentColor = getCustomerSegmentColor(segment)
+                  const favoriteItem = customer.favoriteItems.size > 0 
+                    ? Array.from(customer.favoriteItems.entries()).sort((a, b) => b[1] - a[1])[0][0]
+                    : 'None'
+                  const preferredLocation = customer.preferredLocations.size > 0
+                    ? Array.from(customer.preferredLocations.entries()).sort((a, b) => b[1] - a[1])[0][0]
+                    : 'None'
+
+                  return (
+                    <div 
+                      key={customer.id} 
+                      className="customer-row"
+                      onClick={() => openCustomerDetailModal(customer)}
+                    >
+                      <div className="col-customer">
+                        <div className="customer-info">
+                          <div className="customer-avatar-small">
+                            <User size={20} />
+                          </div>
+                          <div>
+                            <h5>{customer.name}</h5>
+                            <p>
+                              {customer.email && <span>{customer.email}</span>}
+                              {customer.phone && <span>{customer.phone}</span>}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="col-segment">
+                        <span 
+                          className="segment-badge"
+                          style={{ backgroundColor: segmentColor }}
+                        >
+                          {segment}
+                        </span>
+                      </div>
+                      <div className="col-orders">{customer.totalOrders}</div>
+                      <div className="col-spent">${customer.totalSpent.toFixed(2)}</div>
+                      <div className="col-favorite">{favoriteItem}</div>
+                      <div className="col-location">{preferredLocation}</div>
+                      <div className="col-since">{formatCustomerSince(customer.firstOrderDate)}</div>
+                      <div className="col-actions">
+                        {customer.email && (
+                          <button 
+                            className="btn-email-mini"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              sendEmailToCustomer(customer.email)
+                            }}
+                            title="Send Email"
+                          >
+                            <Mail size={14} />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        )}
+        
+        <div className="customer-summary">
+          <div className="customer-summary-stats">
+            <div className="stat">
+              <span className="stat-icon">👥</span>
+              <span>Showing {filteredCustomers.length} of {customers.length} customers</span>
+            </div>
+            <div className="stat">
+              <span className="stat-icon">👤</span>
+              <span>{customers.filter(c => c.isRegistered).length} registered</span>
+            </div>
+            <div className="stat">
+              <span className="stat-icon">🛒</span>
+              <span>{customers.filter(c => !c.isRegistered).length} guest</span>
+            </div>
+            <div className="stat">
+              <span className="stat-icon">📦</span>
+              <span>{customers.filter(c => c.totalOrders === 0).length} without orders</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Customer Management Functions
+  const loadCustomers = async () => {
+    try {
+      setIsLoadingCustomers(true)
+      console.log('🔄 Loading all customers from API...')
+      
+      // Get comprehensive customer data from the new endpoint
+      const customerData = await ApiService.getAllCustomers()
+      console.log('📊 Customer data received:', customerData)
+      
+      if (customerData && customerData.customers) {
+        const allCustomers = customerData.customers.map(customer => {
+          // Calculate enhanced analytics for each customer
+          const now = new Date()
+          const daysSinceLastOrder = customer.lastOrderDate 
+            ? Math.floor((now - new Date(customer.lastOrderDate)) / (1000 * 60 * 60 * 24))
+            : null
+          
+          // Determine lifecycle based on order history and registration status
+          let lifecycle = 'new'
+          if (customer.totalSpent > 200) {
+            lifecycle = 'vip'
+          } else if (daysSinceLastOrder && daysSinceLastOrder > 90) {
+            lifecycle = 'churned'
+          } else if (daysSinceLastOrder && daysSinceLastOrder > 30) {
+            lifecycle = 'at_risk'
+          } else if (customer.totalOrders > 1) {
+            lifecycle = 'active'
+          } else if (customer.isRegistered && customer.totalOrders === 0) {
+            lifecycle = 'new'
+          }
+          
+          return {
+            ...customer,
+            daysSinceLastOrder: daysSinceLastOrder || 0,
+            lifecycle,
+            isNew: customer.isRegistered && customer.totalOrders === 0,
+            averageOrderValue: customer.totalOrders > 0 ? customer.totalSpent / customer.totalOrders : 0,
+            favoriteItems: new Map(), // Will be populated from order analysis if needed
+            preferredLocations: new Map(), // Will be populated from order analysis if needed
+            retentionScore: calculateRetentionScore(customer, daysSinceLastOrder)
+          }
+        })
+        
+        setCustomers(allCustomers)
+        
+        // Update customer stats
+        const stats = {
+          totalCustomers: allCustomers.length,
+          newThisMonth: allCustomers.filter(c => c.isNew || (c.registeredDate && new Date(c.registeredDate) > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000))).length,
+          returningCustomers: allCustomers.filter(c => c.totalOrders > 1).length,
+          vipCustomers: allCustomers.filter(c => c.lifecycle === 'vip').length,
+          atRiskCustomers: allCustomers.filter(c => c.lifecycle === 'at_risk').length,
+          churnedCustomers: allCustomers.filter(c => c.lifecycle === 'churned').length,
+          activeCustomers: allCustomers.filter(c => c.lifecycle === 'active').length,
+          highValueCustomers: allCustomers.filter(c => c.totalSpent > 100).length,
+          averageOrderValue: customerData.summary.totalOrders > 0 ? customerData.summary.totalRevenue / customerData.summary.totalOrders : 0,
+          totalRevenue: customerData.summary.totalRevenue
+        }
+        
+        setCustomerStats(stats)
+        
+        console.log('✅ Customers loaded successfully:', {
+          total: allCustomers.length,
+          registered: allCustomers.filter(c => c.isRegistered).length,
+          guest: allCustomers.filter(c => !c.isRegistered).length,
+          withOrders: allCustomers.filter(c => c.totalOrders > 0).length,
+          withoutOrders: allCustomers.filter(c => c.totalOrders === 0).length
+        })
+      }
+    } catch (error) {
+      console.error('❌ Error loading customers:', error)
+      // Fallback to order-based customer analytics if the new endpoint fails
+      if (orders.length > 0) {
+        console.log('🔄 Falling back to order-based customer analytics...')
+        calculateCustomerAnalytics(orders)
+      }
+    } finally {
+      setIsLoadingCustomers(false)
+    }
+  }
+
+  // Helper function to calculate retention score
+  const calculateRetentionScore = (customer, daysSinceLastOrder) => {
+    let score = 0
+    if (customer.totalOrders > 1) score += 20
+    if (customer.totalOrders > 5) score += 20
+    if (daysSinceLastOrder !== null && daysSinceLastOrder < 30) score += 30
+    if (customer.totalOrders > 0 && customer.totalSpent / customer.totalOrders > 20) score += 20 // High avg order value
+    if (customer.totalSpent > 100) score += 10
+    return score
+  }
+
+  const getFilteredCustomers = () => {
+    let filtered = customers.filter(customer => {
+      const searchMatch = customerSearchTerm === '' || 
+        customer.name.toLowerCase().includes(customerSearchTerm.toLowerCase()) ||
+        (customer.email && customer.email.toLowerCase().includes(customerSearchTerm.toLowerCase())) ||
+        (customer.phone && customer.phone.includes(customerSearchTerm))
+      
+      if (!searchMatch) return false
+      
+      switch (customerFilter) {
+        case 'new': return customer.isNew
+        case 'active': return customer.lifecycle === 'active'
+        case 'returning': return customer.totalOrders > 1
+        case 'vip': return customer.lifecycle === 'vip'
+        case 'at_risk': return customer.lifecycle === 'at_risk'
+        case 'churned': return customer.lifecycle === 'churned'
+        case 'registered': return customer.isRegistered
+        case 'guest': return !customer.isRegistered
+        case 'no_orders': return customer.totalOrders === 0
+        default: return true
+      }
+    })
+    
+    return filtered.sort((a, b) => b.totalSpent - a.totalSpent)
+  }
+
+  const openCustomerDetailModal = async (customer) => {
+    try {
+      setLoadingCustomerOrders(true)
+      setShowCustomerDetailModal(true)
+      
+      // Debug logging to see customer data structure
+      console.log('🔍 Customer data received:', customer)
+      
+      // Ensure we have basic customer info with fallbacks
+      const customerName = customer.name || `${customer.first_name || ''} ${customer.last_name || ''}`.trim() || 'Unknown Customer'
+      const customerEmail = customer.email || customer.customer_email || null
+      const customerPhone = customer.phone || customer.customer_phone || null
+      
+      console.log('📋 Processed customer info:', {
+        name: customerName,
+        email: customerEmail,
+        phone: customerPhone,
+        isRegistered: customer.isRegistered,
+        id: customer.id
+      })
+      
+      // Enhanced customer order matching logic
+      let detailedOrders = []
+      
+      if (customer.isRegistered && customer.id && customer.id.startsWith('USER-')) {
+        // For registered customers, FIRST try to match by user_id
+        detailedOrders = orders.filter(order => order.user_id === customer.id)
+        console.log(`🔍 Found ${detailedOrders.length} orders by user_id for registered customer ${customer.id}`)
+        
+        // If no orders found by user_id, also check by contact info (for legacy orders before user_id was properly set)
+        if (detailedOrders.length === 0) {
+          console.log('🔍 No orders found by user_id, checking by contact info for legacy orders...')
+          const legacyOrders = orders.filter(order => {
+            // Only match orders without user_id to avoid duplicating orders from other users
+            if (order.user_id && order.user_id !== customer.id) return false
+            
+            const phoneMatch = customerPhone && order.customer_phone === customerPhone
+            const emailMatch = customerEmail && order.customer_email === customerEmail
+            const nameMatch = customerName && order.customer_name === customerName
+            return phoneMatch || emailMatch || nameMatch
+          })
+          detailedOrders = legacyOrders
+          console.log(`🔍 Found ${legacyOrders.length} legacy orders by contact info`)
+        }
+      } else {
+        // For guest customers, match by phone/email/name combination
+        // Exclude orders that have a user_id (those belong to registered customers)
+        detailedOrders = orders.filter(order => {
+          // Skip orders that belong to registered users
+          if (order.user_id && order.user_id !== '') return false
+          
+          const phoneMatch = customerPhone && order.customer_phone === customerPhone
+          const emailMatch = customerEmail && order.customer_email === customerEmail
+          const nameMatch = customerName && order.customer_name === customerName
+          return phoneMatch || emailMatch || nameMatch
+        })
+        console.log(`🔍 Found ${detailedOrders.length} orders for guest customer`)
+      }
+      
+      // Calculate customer insights
+      const favoriteItems = new Map()
+      const preferredLocations = new Map()
+      const ordersByMonth = new Map()
+      let totalSpent = 0
+      let lastOrderDate = null
+      
+      detailedOrders.forEach(order => {
+        // Parse items safely
+        let orderItems = []
+        try {
+          orderItems = typeof order.items === 'string' ? JSON.parse(order.items) : (order.items || [])
+        } catch (e) {
+          console.warn('Failed to parse order items:', order.items)
+        }
+        
+        // Count favorite items
+        orderItems.forEach(item => {
+          const itemName = item.name || 'Unknown Item'
+          favoriteItems.set(itemName, (favoriteItems.get(itemName) || 0) + (item.quantity || 1))
+        })
+        
+        // Count preferred locations
+        if (order.location_name) {
+          preferredLocations.set(order.location_name, (preferredLocations.get(order.location_name) || 0) + 1)
+        }
+        
+        // Track spending and dates
+        totalSpent += parseFloat(order.total_amount) || 0
+        const orderDate = new Date(order.order_date || order.created_at)
+        if (!lastOrderDate || orderDate > lastOrderDate) {
+          lastOrderDate = orderDate
+        }
+        
+        // Track orders by month for trends
+        const monthKey = `${orderDate.getFullYear()}-${orderDate.getMonth()}`
+        ordersByMonth.set(monthKey, (ordersByMonth.get(monthKey) || 0) + 1)
+      })
+      
+      // Calculate additional metrics
+      const avgOrderValue = detailedOrders.length > 0 ? totalSpent / detailedOrders.length : 0
+      const daysSinceLastOrder = lastOrderDate ? Math.floor((new Date() - lastOrderDate) / (1000 * 60 * 60 * 24)) : null
+      const customerLifetime = customer.registeredDate ? 
+        Math.floor((new Date() - new Date(customer.registeredDate)) / (1000 * 60 * 60 * 24)) : 
+        (customer.firstOrderDate ? Math.floor((new Date() - new Date(customer.firstOrderDate)) / (1000 * 60 * 60 * 24)) : 0)
+      
+      // Determine customer lifecycle status
+      let lifecycle = 'new'
+      if (detailedOrders.length === 0 && customer.isRegistered) {
+        lifecycle = 'registered_no_orders'
+      } else if (totalSpent > 200 && detailedOrders.length > 10) {
+        lifecycle = 'vip'
+      } else if (daysSinceLastOrder && daysSinceLastOrder > 90) {
+        lifecycle = 'churned'
+      } else if (daysSinceLastOrder && daysSinceLastOrder > 30) {
+        lifecycle = 'at_risk'
+      } else if (detailedOrders.length > 3) {
+        lifecycle = 'active'
+      }
+      
+      // Create enhanced customer object with guaranteed basic info
+      const enhancedCustomer = {
+        ...customer,
+        name: customerName,
+        email: customerEmail,
+        phone: customerPhone,
+        totalOrders: detailedOrders.length,
+        totalSpent: totalSpent,
+        avgOrderValue: avgOrderValue,
+        lastOrderDate: lastOrderDate,
+        daysSinceLastOrder: daysSinceLastOrder,
+        customerLifetime: customerLifetime,
+        lifecycle: lifecycle,
+        favoriteItems: favoriteItems,
+        preferredLocations: preferredLocations,
+        ordersByMonth: ordersByMonth,
+        // Calculate frequency metrics
+        orderFrequency: customerLifetime > 0 ? (detailedOrders.length / (customerLifetime / 30)) : 0, // orders per month
+        retentionScore: calculateRetentionScore(customer, daysSinceLastOrder)
+      }
+      
+      console.log('✅ Enhanced customer object:', enhancedCustomer)
+      setSelectedCustomer(enhancedCustomer)
+      setCustomerOrders(detailedOrders)
+      
+    } catch (error) {
+      console.error('Error loading customer details:', error)
+      // Still show modal with basic info if calculation fails
+      const fallbackCustomer = {
+        ...customer,
+        name: customer.name || `${customer.first_name || ''} ${customer.last_name || ''}`.trim() || 'Unknown Customer',
+        email: customer.email || customer.customer_email || null,
+        phone: customer.phone || customer.customer_phone || null,
+        favoriteItems: new Map(),
+        preferredLocations: new Map(),
+        ordersByMonth: new Map(),
+        totalOrders: customer.totalOrders || 0,
+        totalSpent: customer.totalSpent || 0,
+        avgOrderValue: customer.totalOrders > 0 ? (customer.totalSpent || 0) / customer.totalOrders : 0,
+        lifecycle: 'unknown',
+        retentionScore: 0
+      }
+      setSelectedCustomer(fallbackCustomer)
+      setCustomerOrders([])
+    } finally {
+      setLoadingCustomerOrders(false)
+    }
+  }
+
+  const closeCustomerDetailModal = () => {
+    setShowCustomerDetailModal(false)
+    setSelectedCustomer(null)
+    setCustomerOrders([])
+  }
+
+  const sendEmailToCustomer = (customerEmail) => {
+    if (customerEmail) {
+      window.open(`mailto:${customerEmail}`, '_blank')
+    }
+  }
+
+  const getCustomerSegment = (customer) => {
+    if (customer.lifecycle) {
+      switch (customer.lifecycle) {
+        case 'vip': return 'VIP'
+        case 'active': return 'Active'
+        case 'at_risk': return 'At Risk'
+        case 'churned': return 'Churned'
+        case 'new': return 'New'
+        default: return 'Regular'
+      }
+    }
+    if (customer.totalSpent > 100) return 'VIP'
+    if (customer.totalOrders > 3) return 'Loyal'
+    if (customer.isNew) return 'New'
+    return 'Regular'
+  }
+
+  const getCustomerSegmentColor = (segment) => {
+    switch (segment) {
+      case 'VIP': return '#ff6b35'
+      case 'Active': return '#4CAF50'
+      case 'At Risk': return '#FF9800'
+      case 'Churned': return '#f44336'
+      case 'New': return '#2196F3'
+      default: return '#9E9E9E'
+    }
+  }
+
+  const formatCustomerSince = (date) => {
+    const now = new Date()
+    const customerDate = new Date(date)
+    const diffMonths = (now.getFullYear() - customerDate.getFullYear()) * 12 + (now.getMonth() - customerDate.getMonth())
+    
+    if (diffMonths < 1) return 'This month'
+    if (diffMonths === 1) return '1 month ago'
+    if (diffMonths < 12) return `${diffMonths} months ago`
+    
+    const years = Math.floor(diffMonths / 12)
+    return years === 1 ? '1 year ago' : `${years} years ago`
   }
 
   // Show loading screen while initializing
@@ -2655,6 +3628,397 @@ const DashboardPage = ({ onLogout }) => {
                       <p>📧 No email address available for this customer</p>
                     </div>
                   )}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Customer Detail Modal */}
+        {showCustomerDetailModal && selectedCustomer && (
+          <div className="modal-overlay" onClick={closeCustomerDetailModal}>
+            <div className="modal-content customer-detail-modal" onClick={(e) => e.stopPropagation()}>
+              <div className="modal-header">
+                <h3>Customer Profile</h3>
+                <button className="modal-close" onClick={closeCustomerDetailModal}>×</button>
+              </div>
+              
+              <div className="customer-detail-content">
+                {/* Customer Header */}
+                <div className="customer-profile-header">
+                  <div className="customer-avatar-large">
+                    <User size={48} />
+                  </div>
+                  <div className="customer-header-info">
+                    <h2>{selectedCustomer.name}</h2>
+                    <div className="customer-badges">
+                      <span 
+                        className="segment-badge large"
+                        style={{ backgroundColor: getCustomerSegmentColor(getCustomerSegment(selectedCustomer)) }}
+                      >
+                        {getCustomerSegment(selectedCustomer)} Customer
+                      </span>
+                      <span className={`type-badge ${selectedCustomer.isRegistered ? 'registered' : 'guest'}`}>
+                        {selectedCustomer.isRegistered ? '👤 Registered' : '👥 Guest'}
+                      </span>
+                    </div>
+                    <div className="customer-contact-info">
+                      {selectedCustomer.email && (
+                        <div className="contact-item">
+                          <Mail size={16} />
+                          <span>{selectedCustomer.email}</span>
+                        </div>
+                      )}
+                      {selectedCustomer.phone && (
+                        <div className="contact-item">
+                          <Phone size={16} />
+                          <span>{selectedCustomer.phone}</span>
+                        </div>
+                      )}
+                      <div className="contact-item">
+                        <Calendar size={16} />
+                        <span>
+                          {selectedCustomer.isRegistered ? 'Registered' : 'First order'} {formatCustomerSince(selectedCustomer.registeredDate || selectedCustomer.firstOrderDate)}
+                        </span>
+                      </div>
+                      {selectedCustomer.customerLifetime > 0 && (
+                        <div className="contact-item">
+                          <Clock size={16} />
+                          <span>Customer for {selectedCustomer.customerLifetime} days</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Enhanced Customer Stats */}
+                <div className="customer-stats-section">
+                  <div className="stats-row">
+                    <div className="stat-item">
+                      <div className="stat-icon">
+                        <ShoppingBag size={24} />
+                      </div>
+                      <div className="stat-info">
+                        <span className="stat-value">{selectedCustomer.totalOrders}</span>
+                        <span className="stat-label">Total Orders</span>
+                      </div>
+                    </div>
+                    <div className="stat-item">
+                      <div className="stat-icon">
+                        <DollarSign size={24} />
+                      </div>
+                      <div className="stat-info">
+                        <span className="stat-value">${selectedCustomer.totalSpent.toFixed(2)}</span>
+                        <span className="stat-label">Total Spent</span>
+                      </div>
+                    </div>
+                    <div className="stat-item">
+                      <div className="stat-icon">
+                        <Target size={24} />
+                      </div>
+                      <div className="stat-info">
+                        <span className="stat-value">
+                          ${selectedCustomer.avgOrderValue.toFixed(2)}
+                        </span>
+                        <span className="stat-label">Avg Order Value</span>
+                      </div>
+                    </div>
+                    <div className="stat-item">
+                      <div className="stat-icon">
+                        <TrendingUp size={24} />
+                      </div>
+                      <div className="stat-info">
+                        <span className="stat-value">
+                          {selectedCustomer.orderFrequency.toFixed(1)}
+                        </span>
+                        <span className="stat-label">Orders/Month</span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Additional Stats Row */}
+                  <div className="stats-row">
+                    {selectedCustomer.lastOrderDate && (
+                      <div className="stat-item">
+                        <div className="stat-icon">
+                          <Clock size={24} />
+                        </div>
+                        <div className="stat-info">
+                          <span className="stat-value">
+                            {selectedCustomer.daysSinceLastOrder === 0 ? 'Today' : 
+                             selectedCustomer.daysSinceLastOrder === 1 ? '1 day ago' :
+                             `${selectedCustomer.daysSinceLastOrder} days ago`}
+                          </span>
+                          <span className="stat-label">Last Order</span>
+                        </div>
+                      </div>
+                    )}
+                    <div className="stat-item">
+                      <div className="stat-icon">
+                        <Heart size={24} />
+                      </div>
+                      <div className="stat-info">
+                        <span className="stat-value">{selectedCustomer.retentionScore}%</span>
+                        <span className="stat-label">Retention Score</span>
+                      </div>
+                    </div>
+                    {selectedCustomer.lifecycle === 'registered_no_orders' && (
+                      <div className="stat-item">
+                        <div className="stat-icon">
+                          <AlertCircle size={24} />
+                        </div>
+                        <div className="stat-info">
+                          <span className="stat-value">0</span>
+                          <span className="stat-label">Orders Placed</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Customer Insights */}
+                <div className="customer-insights">
+                  <div className="insights-grid">
+                    {/* Favorite Items */}
+                    <div className="insight-card">
+                      <h4>
+                        <Star size={20} />
+                        Favorite Items
+                      </h4>
+                      <div className="favorite-items">
+                        {selectedCustomer.favoriteItems && selectedCustomer.favoriteItems.size > 0 ? (
+                          Array.from(selectedCustomer.favoriteItems.entries())
+                            .sort((a, b) => b[1] - a[1])
+                            .slice(0, 3)
+                            .map(([item, count], index) => (
+                              <div key={index} className="favorite-item">
+                                <span className="item-name">{item}</span>
+                                <span className="item-count">×{count}</span>
+                              </div>
+                            ))
+                        ) : (
+                          <p className="no-data">
+                            {selectedCustomer.totalOrders === 0 ? 'No orders yet' : 'No favorite items data'}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Preferred Locations */}
+                    <div className="insight-card">
+                      <h4>
+                        <MapPin size={20} />
+                        Preferred Locations
+                      </h4>
+                      <div className="preferred-locations">
+                        {selectedCustomer.preferredLocations && selectedCustomer.preferredLocations.size > 0 ? (
+                          Array.from(selectedCustomer.preferredLocations.entries())
+                            .sort((a, b) => b[1] - a[1])
+                            .slice(0, 3)
+                            .map(([location, count], index) => (
+                              <div key={index} className="preferred-location">
+                                <span className="location-name">{location}</span>
+                                <span className="location-count">{count} orders</span>
+                              </div>
+                            ))
+                        ) : (
+                          <p className="no-data">
+                            {selectedCustomer.totalOrders === 0 ? 'No orders yet' : 'No location preference data'}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Customer Status & Lifecycle */}
+                    <div className="insight-card">
+                      <h4>
+                        <Activity size={20} />
+                        Customer Status
+                      </h4>
+                      <div className="customer-status-info">
+                        <div className="status-item">
+                          <span className="status-label">Lifecycle Stage:</span>
+                          <span className={`status-value lifecycle-${selectedCustomer.lifecycle}`}>
+                            {selectedCustomer.lifecycle === 'registered_no_orders' ? 'Registered (No Orders)' :
+                             selectedCustomer.lifecycle === 'vip' ? 'VIP Customer' :
+                             selectedCustomer.lifecycle === 'active' ? 'Active Customer' :
+                             selectedCustomer.lifecycle === 'at_risk' ? 'At Risk' :
+                             selectedCustomer.lifecycle === 'churned' ? 'Churned' :
+                             'New Customer'}
+                          </span>
+                        </div>
+                        {selectedCustomer.totalOrders > 0 && (
+                          <div className="status-item">
+                            <span className="status-label">Customer Value:</span>
+                            <span className="status-value">
+                              {selectedCustomer.totalSpent > 200 ? 'High Value' :
+                               selectedCustomer.totalSpent > 50 ? 'Medium Value' : 'Low Value'}
+                            </span>
+                          </div>
+                        )}
+                        {selectedCustomer.isRegistered && selectedCustomer.totalOrders === 0 && (
+                          <div className="status-item">
+                            <span className="status-label">Opportunity:</span>
+                            <span className="status-value opportunity">First Order Needed</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Order History */}
+                <div className="customer-order-history">
+                  <h4>
+                    <Activity size={20} />
+                    Recent Order History
+                    {customerOrders.length > 0 && (
+                      <span className="order-count-badge">({customerOrders.length} total)</span>
+                    )}
+                  </h4>
+                  {loadingCustomerOrders ? (
+                    <div className="loading-orders">
+                      <div className="loading-spinner"></div>
+                      <p>Loading order history...</p>
+                    </div>
+                  ) : customerOrders.length > 0 ? (
+                    <div className="order-history-list">
+                      {customerOrders
+                        .sort((a, b) => new Date(b.order_date || b.created_at) - new Date(a.order_date || a.created_at))
+                        .slice(0, 5)
+                        .map((order, index) => (
+                          <div key={index} className="order-history-item">
+                            <div className="order-info">
+                              <div className="order-header">
+                                <span className="order-id">#{order.id}</span>
+                                <span className="order-date">
+                                  {new Date(order.order_date || order.created_at).toLocaleDateString('en-US', {
+                                    month: 'short',
+                                    day: 'numeric',
+                                    year: 'numeric'
+                                  })}
+                                </span>
+                              </div>
+                              <div className="order-details">
+                                {(() => {
+                                  let orderItems = []
+                                  try {
+                                    orderItems = typeof order.items === 'string' ? JSON.parse(order.items) : (order.items || [])
+                                  } catch (e) {
+                                    orderItems = []
+                                  }
+                                  return orderItems.length > 0 && (
+                                    <div className="order-items-preview">
+                                      {orderItems.slice(0, 2).map((item, itemIndex) => (
+                                        <span key={itemIndex} className="item-preview">
+                                          {item.quantity}× {item.name}
+                                        </span>
+                                      ))}
+                                      {orderItems.length > 2 && (
+                                        <span className="more-items">+{orderItems.length - 2} more</span>
+                                      )}
+                                    </div>
+                                  )
+                                })()}
+                                <div className="order-location">
+                                  {order.location_name && (
+                                    <span>
+                                      <MapPin size={14} />
+                                      {order.location_name}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                            <div className="order-amount">
+                              <span className="amount">${(parseFloat(order.total_amount) || 0).toFixed(2)}</span>
+                              <span 
+                                className="status"
+                                style={{ color: getStatusColor(order.status) }}
+                              >
+                                {order.status}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      {customerOrders.length > 5 && (
+                        <div className="more-orders">
+                          <p>And {customerOrders.length - 5} more orders...</p>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="no-orders">
+                      {selectedCustomer.isRegistered ? (
+                        <div className="no-orders-registered">
+                          <AlertCircle size={48} color="#ff9800" />
+                          <h3>No Orders Yet</h3>
+                          <p>This customer is registered but hasn't placed their first order.</p>
+                          <p><strong>Opportunity:</strong> Send a welcome offer or follow up!</p>
+                        </div>
+                      ) : (
+                        <p>No order history available</p>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* Enhanced CRM Actions */}
+                <div className="customer-actions-section">
+                  <h4>
+                    <MessageSquare size={20} />
+                    Customer Actions
+                  </h4>
+                  <div className="action-buttons">
+                    {selectedCustomer.email && (
+                      <button 
+                        className="btn-action btn-email"
+                        onClick={() => sendEmailToCustomer(selectedCustomer.email)}
+                        title="Send email to customer"
+                      >
+                        <Mail size={16} />
+                        Send Email
+                      </button>
+                    )}
+                    <button 
+                      className="btn-action btn-note"
+                      onClick={() => alert('Customer notes feature coming soon!')}
+                      title="Add customer note"
+                    >
+                      <Edit3 size={16} />
+                      Add Note
+                    </button>
+                    {selectedCustomer.totalSpent > 100 && (
+                      <button 
+                        className="btn-action btn-loyalty"
+                        onClick={() => alert('VIP loyalty rewards coming soon!')}
+                        title="Manage loyalty rewards"
+                      >
+                        <Star size={16} />
+                        VIP Rewards
+                      </button>
+                    )}
+                    {selectedCustomer.isRegistered && selectedCustomer.totalOrders === 0 && (
+                      <button 
+                        className="btn-action btn-welcome"
+                        onClick={() => alert('Welcome campaign feature coming soon!')}
+                        title="Send welcome offer"
+                      >
+                        <Gift size={16} />
+                        Welcome Offer
+                      </button>
+                    )}
+                    {selectedCustomer.lifecycle === 'at_risk' && (
+                      <button 
+                        className="btn-action btn-retention"
+                        onClick={() => alert('Retention campaign feature coming soon!')}
+                        title="Send retention offer"
+                      >
+                        <RefreshCw size={16} />
+                        Win Back
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>

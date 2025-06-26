@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { LogOut, User, Home, BarChart3, Settings as SettingsIcon, Menu as MenuIcon, MapPin, Navigation, TrendingUp, ClipboardList } from 'lucide-react'
+import { LogOut, User, Home, BarChart3, Settings as SettingsIcon, Menu as MenuIcon, MapPin, Navigation, TrendingUp, ClipboardList, Users } from 'lucide-react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useBusinessConfig } from '../context/BusinessContext'
 import Logo from './Logo'
@@ -9,7 +9,31 @@ const DashboardHeader = ({ onLogout, activeTab, onTabChange }) => {
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false)
   const { config } = useBusinessConfig()
   const navigate = useNavigate()
-  const adminUser = localStorage.getItem('adminUser') || 'Admin'
+  
+  // Get admin user data from localStorage
+  const getCurrentUser = () => {
+    try {
+      const userInfo = localStorage.getItem('currentUser')
+      if (userInfo) {
+        const user = JSON.parse(userInfo)
+        // Create display name from available user data
+        if (user.firstName && user.lastName) {
+          return `${user.firstName} ${user.lastName}`
+        } else if (user.firstName) {
+          return user.firstName
+        } else if (user.name) {
+          return user.name
+        } else if (user.email) {
+          return user.email.split('@')[0] // Use email username as fallback
+        }
+      }
+    } catch (error) {
+      console.error('Error parsing user data:', error)
+    }
+    return 'Admin' // Final fallback
+  }
+  
+  const adminUser = getCurrentUser()
 
   const handleLogout = () => {
     onLogout()
@@ -38,6 +62,13 @@ const DashboardHeader = ({ onLogout, activeTab, onTabChange }) => {
           >
             <BarChart3 size={18} />
             All Orders
+          </button>
+          <button 
+            className={`dashboard-nav-btn ${activeTab === 'customers' ? 'active' : ''}`}
+            onClick={() => onTabChange('customers')}
+          >
+            <Users size={18} />
+            Customers
           </button>
           <button 
             className={`dashboard-nav-btn ${activeTab === 'menu' ? 'active' : ''}`}

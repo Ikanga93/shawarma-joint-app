@@ -137,10 +137,36 @@ class ApiService {
   }
 
   static async createOrder(orderData) {
+    // Get customer authentication info to include user_id for registered customers
+    const customerToken = localStorage.getItem('customerAccessToken')
+    let userId = null
+    
+    if (customerToken) {
+      try {
+        // Decode the token to get user ID (simple JWT decode)
+        const tokenPayload = JSON.parse(atob(customerToken.split('.')[1]))
+        userId = tokenPayload.id
+        console.log('🔍 Creating order for registered customer:', userId)
+      } catch (error) {
+        console.warn('Could not decode customer token:', error)
+      }
+    }
+
+    // Include userId in order data if available
+    const orderDataWithUser = {
+      ...orderData,
+      userId: userId
+    }
+
+    console.log('📦 Creating order with data:', {
+      ...orderDataWithUser,
+      items: `[${orderDataWithUser.items?.length || 0} items]` // Don't log full items for brevity
+    })
+
     const response = await fetch(`${this.BASE_URL}/orders`, {
       method: 'POST',
       headers: this.getAuthHeaders(),
-      body: JSON.stringify(orderData)
+      body: JSON.stringify(orderDataWithUser)
     })
     if (!response.ok) throw new Error('Failed to create order')
     return this.parseResponse(response)
@@ -441,6 +467,17 @@ class ApiService {
       throw new Error('Failed to fetch users')
     }
     return response.json()
+  }
+
+  // Get all customers (registered + guest customers from orders) - admin only
+  static async getAllCustomers() {
+    const response = await this.makeAuthenticatedRequest(`${this.BASE_URL}/admin/customers`, {
+      headers: this.getAdminAuthHeaders()
+    })
+    if (!response.ok) {
+      throw new Error('Failed to fetch customers')
+    }
+    return this.parseResponse(response)
   }
 
   // Order Management Methods

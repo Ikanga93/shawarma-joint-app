@@ -475,6 +475,128 @@ app.get('/api/admin/users', authenticateToken, authorizeRole(['admin']), async (
   }
 })
 
+// Get all customers (registered users + guest customers from orders) - admin only
+app.get('/api/admin/customers', authenticateToken, authorizeRole(['admin']), async (req, res) => {
+  try {
+    console.log('🔍 Fetching all customers (registered + guest)...')
+    
+    // Get all registered customers
+    const registeredCustomers = await queryAll(`
+      SELECT 
+        u.id, u.email, u.phone, u.first_name, u.last_name, u.created_at,
+        cp.preferences
+      FROM users u
+      LEFT JOIN customer_profiles cp ON u.id = cp.user_id
+      WHERE u.role = 'customer'
+      ORDER BY u.created_at DESC
+    `)
+    
+    console.log(`📋 Found ${registeredCustomers.length} registered customers`)
+    
+    // Get all unique guest customers from orders (those without user_id)
+    const guestCustomers = await queryAll(`
+      SELECT DISTINCT
+        customer_name,
+        customer_phone,
+        customer_email,
+        MIN(order_date) as first_order_date,
+        MAX(order_date) as last_order_date,
+        COUNT(*) as total_orders,
+        SUM(total_amount) as total_spent
+      FROM orders 
+      WHERE user_id IS NULL OR user_id = ''
+      GROUP BY customer_phone, customer_email, customer_name
+      ORDER BY total_spent DESC
+    `)
+    
+    console.log(`📋 Found ${guestCustomers.length} guest customers`)
+    
+    // Get order statistics for registered customers
+    const customerOrderStats = await queryAll(`
+      SELECT 
+        user_id,
+        COUNT(*) as total_orders,
+        SUM(total_amount) as total_spent,
+        MIN(order_date) as first_order_date,
+        MAX(order_date) as last_order_date
+      FROM orders 
+      WHERE user_id IS NOT NULL AND user_id != ''
+      GROUP BY user_id
+    `)
+    
+    // Create a map for quick lookup of order stats
+    const orderStatsMap = new Map()
+    customerOrderStats.forEach(stat => {
+      orderStatsMap.set(stat.user_id, stat)
+    })
+    
+    // Combine and format all customers
+    const allCustomers = []
+    
+    // Add registered customers with their order data
+    registeredCustomers.forEach(customer => {
+      const orderStats = orderStatsMap.get(customer.id) || {
+        total_orders: 0,
+        total_spent: 0,
+        first_order_date: null,
+        last_order_date: null
+      }
+      
+      allCustomers.push({
+        id: customer.id,
+        type: 'registered',
+        name: `${customer.first_name || ''} ${customer.last_name || ''}`.trim() || 'Unknown',
+        email: customer.email,
+        phone: customer.phone,
+        totalOrders: parseInt(orderStats.total_orders) || 0,
+        totalSpent: parseFloat(orderStats.total_spent) || 0,
+        firstOrderDate: orderStats.first_order_date || customer.created_at,
+        lastOrderDate: orderStats.last_order_date,
+        registeredDate: customer.created_at,
+        preferences: customer.preferences ? JSON.parse(customer.preferences) : null,
+        isRegistered: true
+      })
+    })
+    
+    // Add guest customers
+    guestCustomers.forEach(customer => {
+      allCustomers.push({
+        id: `guest-${customer.customer_phone || customer.customer_email || customer.customer_name}`,
+        type: 'guest',
+        name: customer.customer_name || 'Unknown',
+        email: customer.customer_email,
+        phone: customer.customer_phone,
+        totalOrders: parseInt(customer.total_orders) || 0,
+        totalSpent: parseFloat(customer.total_spent) || 0,
+        firstOrderDate: customer.first_order_date,
+        lastOrderDate: customer.last_order_date,
+        registeredDate: null,
+        preferences: null,
+        isRegistered: false
+      })
+    })
+    
+    // Sort by total spent (highest first)
+    allCustomers.sort((a, b) => b.totalSpent - a.totalSpent)
+    
+    console.log(`✅ Combined ${allCustomers.length} total customers (${registeredCustomers.length} registered + ${guestCustomers.length} guest)`)
+    
+    res.json({
+      customers: allCustomers,
+      summary: {
+        totalCustomers: allCustomers.length,
+        registeredCustomers: registeredCustomers.length,
+        guestCustomers: guestCustomers.length,
+        totalRevenue: allCustomers.reduce((sum, c) => sum + c.totalSpent, 0),
+        totalOrders: allCustomers.reduce((sum, c) => sum + c.totalOrders, 0)
+      }
+    })
+  } catch (error) {
+    console.error('❌ Error fetching customers:', error)
+    res.status(500).json({ error: 'Failed to fetch customers' })
+  }
+})
+
 // Create order and Stripe checkout session
 app.post('/api/orders', async (req, res) => {
   try {
