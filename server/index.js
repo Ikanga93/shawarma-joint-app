@@ -1520,6 +1520,22 @@ app.post('/api/auth/login', async (req, res) => {
 
     // Update last login for admin
     if (user.role === 'admin') {
+      // Ensure admin profile exists
+      const adminProfile = await queryOne(
+        'SELECT * FROM admin_profiles WHERE user_id = ?',
+        [user.id]
+      )
+      
+      if (!adminProfile) {
+        // Create admin profile if it doesn't exist
+        console.log(`Creating missing admin profile for user: ${user.email}`)
+        await query(
+          'INSERT INTO admin_profiles (user_id, created_at, updated_at) VALUES (?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)',
+          [user.id]
+        )
+      }
+      
+      // Update last login
       await query(
         'UPDATE admin_profiles SET last_login = CURRENT_TIMESTAMP WHERE user_id = ?',
         [user.id]

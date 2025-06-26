@@ -6,32 +6,33 @@
 // Helper function to safely store data in sessionStorage
 export const safeSessionStorageSet = (key, data) => {
   try {
-    // Create a version of the data without base64 images to save space
-    const dataToCache = Array.isArray(data) ? data.map(item => {
-      if (typeof item === 'object' && item !== null) {
-        return {
-          ...item,
-          image_url: item.image_url && item.image_url.startsWith('data:') ? null : item.image_url
-        }
-      }
-      return item
-    }) : data
-    
-    sessionStorage.setItem(key, JSON.stringify(dataToCache))
-    console.log(`✅ Successfully cached ${key} in sessionStorage`)
+    // First try to store the full data including images
+    sessionStorage.setItem(key, JSON.stringify(data))
+    console.log(`✅ Successfully cached ${key} in sessionStorage (with images)`)
     return true
   } catch (error) {
     console.warn(`Failed to cache data in sessionStorage for key "${key}":`, error.message)
     
-    // If storage is full, clear old cache and try again
+    // If storage is full, try without base64 images
     if (error.name === 'QuotaExceededError') {
       try {
+        // Create a version of the data without base64 images to save space
+        const dataToCache = Array.isArray(data) ? data.map(item => {
+          if (typeof item === 'object' && item !== null) {
+            return {
+              ...item,
+              image_url: item.image_url && item.image_url.startsWith('data:') ? null : item.image_url
+            }
+          }
+          return item
+        }) : data
+        
         clearMenuCache()
         console.log('Cleared old menu cache due to storage quota')
         
         // Try again after clearing cache
         sessionStorage.setItem(key, JSON.stringify(dataToCache))
-        console.log(`✅ Successfully cached ${key} in sessionStorage after clearing cache`)
+        console.log(`✅ Successfully cached ${key} in sessionStorage (without base64 images)`)
         return true
       } catch (retryError) {
         console.warn('Failed to store data even after clearing cache:', retryError.message)
@@ -59,32 +60,33 @@ export const safeSessionStorageGet = (key) => {
 // Helper function to safely store data in localStorage
 export const safeLocalStorageSet = (key, data) => {
   try {
-    // Create a version of the data without base64 images to save space
-    const dataToCache = Array.isArray(data) ? data.map(item => {
-      if (typeof item === 'object' && item !== null) {
-        return {
-          ...item,
-          image_url: item.image_url && item.image_url.startsWith('data:') ? null : item.image_url
-        }
-      }
-      return item
-    }) : data
-    
-    localStorage.setItem(key, JSON.stringify(dataToCache))
-    console.log(`✅ Successfully cached ${key} in localStorage`)
+    // First try to store the full data including images
+    localStorage.setItem(key, JSON.stringify(data))
+    console.log(`✅ Successfully cached ${key} in localStorage (with images)`)
     return true
   } catch (error) {
     console.warn(`Failed to cache data in localStorage for key "${key}":`, error.message)
     
-    // If storage is full, clear old cache and try again
+    // If storage is full, try without base64 images
     if (error.name === 'QuotaExceededError') {
       try {
+        // Create a version of the data without base64 images to save space
+        const dataToCache = Array.isArray(data) ? data.map(item => {
+          if (typeof item === 'object' && item !== null) {
+            return {
+              ...item,
+              image_url: item.image_url && item.image_url.startsWith('data:') ? null : item.image_url
+            }
+          }
+          return item
+        }) : data
+        
         clearStorageCache()
         console.log('Cleared old storage cache due to storage quota')
         
         // Try again after clearing cache
         localStorage.setItem(key, JSON.stringify(dataToCache))
-        console.log(`✅ Successfully cached ${key} in localStorage after clearing cache`)
+        console.log(`✅ Successfully cached ${key} in localStorage (without base64 images)`)
         return true
       } catch (retryError) {
         console.warn('Failed to store data even after clearing cache:', retryError.message)
