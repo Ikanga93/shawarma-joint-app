@@ -269,7 +269,7 @@ const LocationPage = () => {
                 (217) 607-8131
               </a>
               <a href="https://www.facebook.com/profile.php?id=100066724737090" target="_blank" rel="noopener noreferrer" className="contact-link">
-                📱 Mo's Burritos Restaurant
+                📱 Shawarma Joint Restaurant
               </a>
             </div>
           </div>

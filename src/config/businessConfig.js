@@ -18,9 +18,9 @@ export const LOCATION_TYPES = {
 // Main business configuration
 export const businessConfig = {
   // Basic Business Info
-  businessName: "Mo's Burritos",
-  tagline: "Authentic Mexican & Salvadorian Cuisine",
-  description: "Mo's Burritos Restaurant offers a variety of Mexican and Salvadorian food!!! We also offer catering for any type of events.",
+  businessName: "Shawarma Joint",
+  tagline: "Authentic Mediterranean Cuisine",
+  description: "From our kitchen to your plate - the best Mediterranean food (and the largest portions 👀) in Champaign-Urbana. We also offer catering for any type of events.",
   
   // Operating Hours
   hours: {
@@ -35,9 +35,15 @@ export const businessConfig = {
 
   // Contact Information
   contact: {
-    phone: "(217) 607-8131",
-    email: "mosrestaurant19@gmail.com",
-    address: "705 N Neil St, Champaign, IL 61820",
+    phone: "(217) 552-1320",
+    email: "info@shawarmajointerestaurant.com",
+    address: {
+      street: "627 East Green Street",
+      city: "Champaign",
+      state: "IL",
+      zip: "61820",
+      country: "United States"
+    },
     facebook: "https://www.facebook.com/profile.php?id=100066724737090",
     instagram: "Burritosmos"
   },
@@ -53,42 +59,65 @@ export const businessConfig = {
   // Locations
   locations: [
     {
-      id: 1,
-      name: "Mo's Burritos Restaurant",
+      id: 'main-restaurant',
+      name: "Shawarma Joint Restaurant",
       type: "restaurant",
-      address: "705 N Neil St, Champaign, IL 61820",
-      phone: "(217) 607-8131",
-      coordinates: {
-        lat: 40.1164,
-        lng: -88.2434
+      address: {
+        street: "627 East Green Street",
+        city: "Champaign", 
+        state: "IL",
+        zip: "61820",
+        country: "United States"
       },
-      hours: "Mon-Thu: 11AM-9PM, Fri-Sat: 11AM-10PM, Sun: 12PM-8PM",
+      phone: "(217) 552-1320",
+      description: "Our main restaurant location offering authentic Mediterranean cuisine with dine-in, takeout, and catering services.",
+      coordinates: {
+        lat: 40.1106,
+        lng: -88.2073
+      },
+      operatingHours: {
+        monday: "11:00 AM - 9:00 PM",
+        tuesday: "11:00 AM - 9:00 PM", 
+        wednesday: "11:00 AM - 9:00 PM",
+        thursday: "11:00 AM - 9:00 PM",
+        friday: "11:00 AM - 10:00 PM",
+        saturday: "11:00 AM - 10:00 PM",
+        sunday: "12:00 PM - 8:00 PM"
+      },
       features: ["Dine-in", "Takeout", "In-store pickup", "Catering"],
-      description: "Our main restaurant location offering authentic Mexican and Salvadorian cuisine with dine-in, takeout, and catering services."
     },
     {
-      id: 2, 
-      name: "Mo's Burritos - Mobile Catering",
-      type: "mobile",
-      address: "Mobile Service - Champaign-Urbana Area",
-      phone: "(217) 607-8131",
-      coordinates: {
-        lat: 40.1020,
-        lng: -88.2272
-      },
+      id: 'mobile-catering',
+      name: "Shawarma Joint - Mobile Catering",
+      type: "catering",
+      coverage: ["Champaign", "Urbana", "Savoy", "Mahomet"],
+      phone: "(217) 552-1320",
+      email: "catering@shawarmajointerestaurant.com",
+      description: "Mobile catering service bringing authentic Mediterranean flavors to your special events throughout the Champaign-Urbana area.",
       hours: "By Appointment - Events & Catering",
       features: ["Event Catering", "Private Parties", "Corporate Events"],
-      description: "Mobile catering service bringing authentic Mexican and Salvadorian flavors to your special events throughout the Champaign-Urbana area."
     }
   ],
 
   // Menu Categories
   menuCategories: [
     {
-      id: 1,
-      name: "Burritos",
-      description: "Authentic Mexican and Salvadorian style burritos",
-      icon: "🌯"
+      id: 'shawarma',
+      name: "Shawarma",
+      description: "Authentic Mediterranean shawarma wraps and plates",
+      icon: "🥙"
+    },
+    {
+      id: 'kebabs',
+      name: "Kebabs", 
+      description: "Grilled Mediterranean kebabs and skewers",
+      icon: "🍢"
+    },
+    {
+      id: 'mediterranean-plates',
+      name: "Mediterranean Plates",
+      description: "Traditional Mediterranean dishes and specialties",
+      icon: "🍽️"
     },
     {
       id: 2,
@@ -130,16 +159,17 @@ export const businessConfig = {
 
   // Social Media & Marketing
   social: {
-    facebook: "https://www.facebook.com/profile.php?id=100066724737090",
-    instagram: "Burritosmos",
-    email: "mosrestaurant19@gmail.com"
+    facebook: "ShawarmaJointChampaign",
+    instagram: "ShawarmaJoint",
+    email: "mosrestaurant19@gmail.com",
+    twitter: "ShawarmaJoint"
   },
 
   // SEO & Meta
   seo: {
-    title: "Mo's Burritos - Authentic Mexican & Salvadorian Food",
-    description: "Mo's Burritos Restaurant offers authentic Mexican and Salvadorian cuisine in Champaign, IL. Dine-in, takeout, delivery, and catering available.",
-    keywords: "Mexican food, Salvadorian food, burritos, tacos, Champaign IL, restaurant, catering, delivery"
+    title: "Shawarma Joint - Authentic Mediterranean Food",
+    description: "Shawarma Joint Restaurant offers authentic Mediterranean cuisine in Champaign, IL. Dine-in, takeout, delivery, and catering available.",
+    keywords: "Mediterranean food, shawarma, kebabs, Champaign IL, restaurant, catering, delivery, Middle Eastern food"
   },
 
   // Business Features

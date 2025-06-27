@@ -290,7 +290,7 @@ const Menu = () => {
     <section className="menu-section" id="menu">
       <div className="container">
         <h2>Most Liked</h2>
-        <p className="menu-subtitle">Authentic Mexican flavors made fresh daily</p>
+        <p className="menu-subtitle">Authentic Mediterranean flavors made fresh daily</p>
         
         {Object.entries(groupedItems).map(([category, items]) => (
           <div key={category} className="menu-category">

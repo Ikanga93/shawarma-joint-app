@@ -7,9 +7,9 @@ const AboutPage = () => {
     <div className="about-page">
       <div className="about-hero">
         <div className="container">
-          <h1 className="page-title">About Mo's Burritos</h1>
+          <h1 className="page-title">About Shawarma Joint</h1>
           <p className="page-subtitle">
-            Bringing authentic Mexican & Salvadorian flavors to Champaign-Urbana since day one
+            Bringing authentic Mediterranean flavors to Champaign-Urbana since day one
           </p>
         </div>
       </div>
@@ -20,28 +20,28 @@ const AboutPage = () => {
             <div className="story-text">
               <h2>Our Story</h2>
               <p className="story-paragraph">
-                Mo's Burritos Restaurant offers a variety of Mexican and Salvadorian food, 
-                bringing together the rich culinary traditions of both cultures in the heart 
-                of Champaign, Illinois. Our passion for authentic flavors and quality ingredients 
-                drives everything we do.
+                Shawarma Joint Restaurant offers a variety of Mediterranean and Middle Eastern food,
+                made with the freshest ingredients and traditional cooking methods that have been
+                passed down through generations.
               </p>
               <p className="story-paragraph">
-                From our location at 705 N Neil St, we serve the Champaign-Urbana community 
-                with traditional recipes passed down through generations. Whether you're craving 
-                a hearty burrito, authentic tacos, or traditional Salvadorian specialties, 
-                we're here to satisfy your appetite for genuine Latin American cuisine.
+                Our passion for Mediterranean cuisine began with a simple belief: great food
+                brings people together. Whether you're craving our signature shawarma,
+                authentic kebabs, or traditional Mediterranean specialties,
+                we prepare each dish with care and authentic flavors.
               </p>
               <p className="story-paragraph">
-                We also offer catering for any type of events, bringing our delicious food 
-                directly to your celebrations, corporate gatherings, and special occasions.
+                We're not just a restaurant; we're a gathering place where friends and families
+                come together to enjoy delicious Mediterranean food in a warm, welcoming atmosphere.
+                Come taste the difference that fresh ingredients and traditional recipes make!
               </p>
             </div>
             
             <div className="story-image">
               <div className="chef-illustration">👨‍🍳</div>
               <div className="quote">
-                <p>"Food is love made visible. Every dish we prepare carries the spirit of our heritage."</p>
-                <span>- Mo's Burritos Team</span>
+                <p>"From our kitchen to your plate - authentic Mediterranean flavors!"</p>
+                <span>- Shawarma Joint Team</span>
               </div>
             </div>
           </div>
@@ -108,8 +108,16 @@ const AboutPage = () => {
               </div>
               <div className="feature-content">
                 <h3>Mobile Service</h3>
-                <p>We bring the flavors of Mexico directly to your neighborhood and events</p>
+                <p>We bring the flavors of Mediterranean directly to your neighborhood and events</p>
               </div>
+            </div>
+
+            <div className="feature-card">
+              <div className="feature-icon">
+                <span>🥙</span>
+              </div>
+              <h3>Traditional Recipes</h3>
+              <p>Staying true to traditional Mediterranean recipes and cooking methods</p>
             </div>
           </div>
         </div>
@@ -120,14 +128,14 @@ const AboutPage = () => {
           <div className="mission-content">
             <h2>Our Mission</h2>
             <p className="mission-text">
-              To share the rich culinary heritage of Mexico with our community, one taco at a time. 
+              To share the rich culinary heritage of Mediterranean with our community, one dish at a time. 
               We believe that food is more than sustenance – it's a way to connect cultures, 
               create memories, and bring joy to everyday moments.
             </p>
             <div className="mission-values">
               <div className="value">
                 <h4>Authenticity</h4>
-                <p>Staying true to traditional Mexican recipes and cooking methods</p>
+                <p>Staying true to traditional Mediterranean recipes and cooking methods</p>
               </div>
               <div className="value">
                 <h4>Quality</h4>

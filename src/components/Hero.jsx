@@ -1,7 +1,5 @@
 import React from 'react'
-import { MapPin, Clock, Phone } from 'lucide-react'
 import { Link } from 'react-router-dom'
-import Logo from './Logo'
 import './Hero.css'
 
 const Hero = () => {
@@ -15,29 +13,33 @@ const Hero = () => {
   return (
     <section id="home" className="hero">
       <div className="hero-background">
-        <div className="hero-pattern"></div>
+        <video 
+          className="hero-video"
+          autoPlay 
+          muted 
+          loop 
+          playsInline
+        >
+          <source src="/uploads/AQOsfkEx4xl7G1hGSxJ_aTOvw8jTm0LbzkCpiv0PvwgUBHwVA2ow-zlZTd3CKZf7L2sRi8NJcgtGiRFz4zjtk28A.mp4" type="video/mp4" />
+          Your browser does not support the video tag.
+        </video>
+        <div className="hero-overlay"></div>
       </div>
       
       <div className="container">
         <div className="hero-content">
           <div className="hero-text">
             <h1 className="hero-title">
-              ¡Bienvenidos a <span>Mo's Burritos!</span>
+              Welcome to <span>Shawarma Joint</span>
             </h1>
             <p className="hero-subtitle">
-              Savor the taste of authentic Mexican and Salvadorian eats made with love and tradition.
+              From our kitchen to your plate - the best Mediterranean food (and the largest portions 👀) in Champaign-Urbana
             </p>
             
             <div className="hero-buttons">
               <Link to="/menu" className="btn btn-primary btn-large">
-                Place Order
+                Order Now
               </Link>
-            </div>
-          </div>
-
-          <div className="hero-image">
-            <div className="food-truck-illustration">
-              🌮🚚
             </div>
           </div>
         </div>

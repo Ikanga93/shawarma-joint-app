@@ -47,7 +47,7 @@ const CateringPage = () => {
         <div className="container">
           <h1 className="page-title">Catering Services</h1>
           <p className="page-subtitle">
-            Bring authentic Mexican flavors to your special occasion! Perfect for parties, 
+            Bring authentic Mediterranean flavors to your special occasion! Perfect for parties, 
             corporate events, weddings, and community gatherings.
           </p>
         </div>
@@ -55,7 +55,7 @@ const CateringPage = () => {
 
       <section className="catering-services section">
         <div className="container">
-          <h2 className="section-title">Why Choose Mo's Burritos Catering?</h2>
+          <h2 className="section-title">Why Choose Shawarma Joint Catering?</h2>
           
           <div className="services-grid">
             <div className="service-card">
@@ -79,7 +79,7 @@ const CateringPage = () => {
                 <MapPin />
               </div>
               <h3>Full Mobile Setup</h3>
-              <p>We bring everything needed - our truck, equipment, staff, and authentic Mexican atmosphere.</p>
+              <p>We bring everything needed - our truck, equipment, staff, and authentic Mediterranean atmosphere.</p>
             </div>
 
             <div className="service-card">
@@ -115,14 +115,14 @@ const CateringPage = () => {
           
           <div className="packages-grid">
             <div className="package-card">
-              <h3>Taco Bar Package</h3>
-              <div className="package-price">Starting at $12/person</div>
+              <h3>Shawarma Bar Package</h3>
+              <div className="package-price">Starting at $15/person</div>
               <ul className="package-features">
                 <li>Choice of 3 meat options</li>
-                <li>Fresh corn & flour tortillas</li>
-                <li>Traditional toppings bar</li>
-                <li>Rice & beans</li>
-                <li>Chips & salsa</li>
+                <li>Fresh pita bread & wraps</li>
+                <li>Traditional Mediterranean toppings bar</li>
+                <li>Mediterranean rice & sides</li>
+                <li>Hummus & pita chips</li>
                 <li>Setup & cleanup included</li>
               </ul>
               <div className="package-note">Minimum 25 people</div>
@@ -130,15 +130,15 @@ const CateringPage = () => {
 
             <div className="package-card featured">
               <div className="package-badge">Most Popular</div>
-              <h3>Fiesta Package</h3>
-              <div className="package-price">Starting at $18/person</div>
+              <h3>Mediterranean Feast Package</h3>
+              <div className="package-price">Starting at $22/person</div>
               <ul className="package-features">
                 <li>Choice of 4 meat options</li>
-                <li>Quesadillas & nachos</li>
-                <li>Fresh guacamole</li>
-                <li>Mexican rice & refried beans</li>
-                <li>Chips, salsa & queso</li>
-                <li>Churros for dessert</li>
+                <li>Kebabs & Mediterranean platters</li>
+                <li>Fresh hummus & baba ganoush</li>
+                <li>Mediterranean rice & authentic sides</li>
+                <li>Pita chips, dips & olives</li>
+                <li>Baklava for dessert</li>
                 <li>Full service staff</li>
               </ul>
               <div className="package-note">Minimum 50 people</div>
@@ -170,7 +170,7 @@ const CateringPage = () => {
             <div className="event-type">
               <div className="event-emoji">🎉</div>
               <h4>Birthday Parties</h4>
-              <p>Make birthdays memorable with authentic Mexican flavors</p>
+              <p>Make birthdays memorable with authentic Mediterranean flavors</p>
             </div>
             
             <div className="event-type">
@@ -182,7 +182,7 @@ const CateringPage = () => {
             <div className="event-type">
               <div className="event-emoji">💒</div>
               <h4>Weddings</h4>
-              <p>Add authentic Mexican cuisine to your special day</p>
+              <p>Add authentic Mediterranean cuisine to your special day</p>
             </div>
             
             <div className="event-type">

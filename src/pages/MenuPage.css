@@ -113,16 +113,16 @@
 }
 
 .category-btn:hover {
-  border-color: var(--primary-red);
+  background: #7CB342;
+  color: white;
   transform: translateY(-2px);
 }
 
 .category-btn.active {
-  background: var(--primary-red);
-  border-color: var(--primary-red);
+  background: #FF5722;
   color: white;
   transform: translateY(-2px);
-  box-shadow: 0 5px 15px rgba(211, 47, 47, 0.3);
+  box-shadow: 0 4px 12px rgba(255, 87, 34, 0.3);
 }
 
 .category-emoji {
@@ -248,21 +248,21 @@
   justify-content: center;
   width: 36px;
   height: 36px;
-  background: #1B5E20;
+  background: #7CB342;
   color: white;
   border: none;
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.3s ease;
   flex-shrink: 0;
-  box-shadow: 0 2px 8px rgba(27, 94, 32, 0.2);
+  box-shadow: 0 2px 8px rgba(124, 179, 66, 0.2);
   gap: 6px;
 }
 
 .add-to-cart-btn:hover {
-  background: #4CAF50;
+  background: #689F38;
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.4);
+  box-shadow: 0 4px 12px rgba(124, 179, 66, 0.4);
 }
 
 .add-to-cart-btn:disabled {
@@ -342,7 +342,7 @@
 }
 
 .quantity-btn {
-  background: #1B5E20;
+  background: #7CB342;
   color: white;
   border: none;
   width: 32px;
@@ -358,7 +358,7 @@
 }
 
 .quantity-btn:hover {
-  background: #4CAF50;
+  background: #689F38;
   transform: scale(1.1);
 }
 
@@ -707,4 +707,17 @@
     width: 14px !important;
     height: 14px !important;
   }
+}
+
+.filter-btn.active {
+  background: #FF5722;
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(255, 87, 34, 0.3);
+}
+
+.filter-btn:hover {
+  background: #7CB342;
+  color: white;
+  transform: translateY(-2px);
 }

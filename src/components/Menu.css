@@ -465,7 +465,7 @@
 }
 
 .event-booking-note .btn {
-  background: var(--dark-brown);
+  background: #7CB342;
   color: white;
   border: none;
   padding: 12px 24px;
@@ -478,6 +478,7 @@
   transition: all 0.3s ease;
   position: relative;
   overflow: hidden;
+  box-shadow: 0 4px 15px rgba(124, 179, 66, 0.3);
 }
 
 .event-booking-note .btn::before {
@@ -493,7 +494,7 @@
 
 .event-booking-note .btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(62, 39, 35, 0.3);
+  box-shadow: 0 6px 20px rgba(124, 179, 66, 0.4);
 }
 
 .event-booking-note .btn:hover::before {
@@ -760,4 +761,55 @@
 .retry-btn:hover {
   background: #4CAF50;
   transform: translateY(-2px);
+}
+
+.menu-categories .category-btn.active {
+  background: #FF5722;
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(255, 87, 34, 0.3);
+}
+
+.menu-categories .category-btn:hover {
+  background: #7CB342;
+  color: white;
+  transform: translateY(-2px);
+}
+
+.menu-filter .filter-btn.active {
+  color: #7CB342;
+}
+
+.category-divider {
+  border-top: 4px solid #7CB342;
+}
+
+.menu-cta .btn {
+  background: linear-gradient(45deg, #FF5722, #E65100);
+  color: white;
+  padding: 16px 32px;
+  font-size: 1.2rem;
+  font-weight: 700;
+  border-radius: 30px;
+  box-shadow: 0 6px 20px rgba(255, 87, 34, 0.3);
+}
+
+.menu-cta .btn:hover {
+  background: linear-gradient(45deg, #E65100, #D84315);
+  transform: translateY(-3px);
+  box-shadow: 0 8px 25px rgba(255, 87, 34, 0.4);
+}
+
+.event-booking-note .btn {
+  background: #7CB342;
+  color: white;
+  padding: 12px 24px;
+  border-radius: 25px;
+  box-shadow: 0 4px 15px rgba(124, 179, 66, 0.3);
+}
+
+.event-booking-note .btn:hover {
+  background: #689F38;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(124, 179, 66, 0.4);
 }

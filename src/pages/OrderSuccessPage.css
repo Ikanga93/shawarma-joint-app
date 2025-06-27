@@ -264,23 +264,25 @@
 }
 
 .btn-secondary {
-  background: var(--warm-yellow);
-  color: var(--dark-brown);
+  background: linear-gradient(45deg, #7CB342, #689F38);
+  color: white;
+  box-shadow: 0 4px 15px rgba(124, 179, 66, 0.3);
 }
 
 .btn-secondary:hover {
-  background: #F6E05E;
+  background: linear-gradient(45deg, #689F38, #558B2F);
   transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(124, 179, 66, 0.4);
 }
 
 .btn-outline {
   background: transparent;
-  color: var(--dark-brown);
-  border-color: var(--dark-brown);
+  color: #7CB342;
+  border-color: #7CB342;
 }
 
 .btn-outline:hover {
-  background: var(--dark-brown);
+  background: #7CB342;
   color: white;
   transform: translateY(-2px);
 }

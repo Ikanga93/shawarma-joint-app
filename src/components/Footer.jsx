@@ -13,8 +13,8 @@ const Footer = () => {
             <div className="footer-logo">
               <Logo size={60} className="footer-logo-image" />
               <div className="footer-brand-text">
-                <h3>Mo's Burritos</h3>
-                <p>Authentic Mexican & Salvadorian cuisine made with love and tradition.</p>
+                <h3>Shawarma Joint</h3>
+                <p>Authentic Mediterranean cuisine made with love and tradition.</p>
               </div>
             </div>
             <div className="footer-emoji">🌮❤️🇲🇽</div>
@@ -50,7 +50,7 @@ const Footer = () => {
                 <a href="https://www.facebook.com/profile.php?id=100066724737090" target="_blank" rel="noopener noreferrer" className="contact-icon-link" title="Follow us on Facebook">
                   
                 </a>
-                <a href="https://www.instagram.com/burritosmos" target="_blank" rel="noopener noreferrer" className="contact-icon-link" title="Follow us on Instagram">
+                <a href="https://www.instagram.com/shawarmajoinchampaign" target="_blank" rel="noopener noreferrer" className="contact-icon-link" title="Follow us on Instagram">
                   
                 </a>
               </div>
@@ -70,7 +70,7 @@ const Footer = () => {
         </div>
         
         <div className="footer-bottom">
-          <p>&copy; 2025 Mo's Burritos Restaurant. Made with ❤️ and lots of spice!</p>
+          <p>&copy; 2025 Shawarma Joint Restaurant. Made with ❤️ and Mediterranean flavor!</p>
         </div>
       </div>
     </footer>

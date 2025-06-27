@@ -66,7 +66,7 @@ const RegisterPage = () => {
         <div className="auth-logo">
           <UserPlus />
         </div>
-        <h1 className="auth-title">Join Mo's Burritos Family!</h1>
+        <h1 className="auth-title">Join Shawarma Joint Family!</h1>
         <p className="auth-subtitle">
           Create your account for faster ordering and exclusive deals
         </p>

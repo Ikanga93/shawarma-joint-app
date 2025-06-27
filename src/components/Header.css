@@ -32,6 +32,17 @@
   z-index: 101;
 }
 
+.logo-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.brand-text {
+  display: flex;
+  flex-direction: column;
+}
+
 .logo-image {
   flex-shrink: 0;
 }
@@ -44,7 +55,24 @@
   line-height: 1.2;
 }
 
+.brand-text h1 {
+  font-size: 1.4rem;
+  font-weight: 700;
+  margin: 0;
+  color: #7CB342;
+  line-height: 1.2;
+}
+
 .logo-text span {
+  font-size: 0.7rem;
+  color: var(--text-light);
+  font-weight: 400;
+  display: block;
+  line-height: 1;
+  margin-top: 2px;
+}
+
+.brand-text span {
   font-size: 0.7rem;
   color: var(--text-light);
   font-weight: 400;
@@ -118,14 +146,14 @@
 }
 
 .nav-link.active {
-  background: linear-gradient(135deg, #1B5E20, #2E7D32);
+  background: linear-gradient(135deg, #7CB342, #689F38);
   color: white;
   font-weight: 600;
 }
 
 .nav-link.active:hover {
   transform: translateX(8px);
-  background: linear-gradient(135deg, #4CAF50, #66BB6A);
+  background: linear-gradient(135deg, #689F38, #558B2F);
 }
 
 /* Mobile Authentication */
@@ -178,13 +206,13 @@
 }
 
 .mobile-logout {
-  color: #1B5E20;
-  border: 1px solid #1B5E20;
+  color: #7CB342;
+  border: 1px solid #7CB342;
   margin-top: 8px;
 }
 
 .mobile-logout:hover {
-  background: #1B5E20;
+  background: #7CB342;
   color: white;
 }
 
@@ -199,7 +227,7 @@
   align-items: center;
   justify-content: center;
   padding: 16px 24px;
-  background: #1B5E20;
+  background: #7CB342;
   color: white;
   text-decoration: none;
   border-radius: 12px;
@@ -210,7 +238,7 @@
 }
 
 .mobile-login-btn:hover {
-  background: #4CAF50;
+  background: #689F38;
   transform: translateY(-2px);
 }
 
@@ -245,7 +273,7 @@
 }
 
 .user-menu-trigger:hover {
-  border-color: #1B5E20;
+  border-color: #7CB342;
   background: #fafafa;
 }
 
@@ -291,12 +319,12 @@
 
 .dropdown-item:hover {
   background: var(--cream);
-  color: #1B5E20;
+  color: #7CB342;
 }
 
 .dropdown-logout {
   border-top: 1px solid #e0e0e0;
-  color: #1B5E20;
+  color: #7CB342;
 }
 
 .dropdown-logout:hover {
@@ -313,7 +341,7 @@
   align-items: center;
   gap: 8px;
   padding: 8px 20px;
-  background: #1B5E20;
+  background: #7CB342;
   color: white;
   text-decoration: none;
   border-radius: 25px;
@@ -324,7 +352,7 @@
 }
 
 .login-btn:hover {
-  background: #4CAF50;
+  background: #689F38;
   transform: translateY(-1px);
 }
 
@@ -338,22 +366,22 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--dark-brown);
+  background: black;
   color: white;
   border: none;
   border-radius: 50%;
   width: 48px;
   height: 48px;
   cursor: pointer;
-  transition: all 0.3s ease;
-  box-shadow: 0 2px 8px rgba(46, 74, 46, 0.3);
+  transition: none;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
   order: 2; /* Ensure it appears before hamburger menu */
 }
 
 .cart-btn:hover {
-  background: #1E3A1E;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(46, 74, 46, 0.4);
+  background: black;
+  transform: none;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
 .cart-count {
