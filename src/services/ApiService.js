@@ -176,7 +176,7 @@ class ApiService {
   }
 
   static async getCustomerOrders(customerId) {
-    const response = await this.makeAuthenticatedRequest(`${this.BASE_URL}/orders/customer/${customerId}`, {
+    const response = await this.makeAuthenticatedRequest(`${this.BASE_URL}/customers/${customerId}/orders`, {
       headers: this.getAuthHeaders()
     })
     if (!response.ok) throw new Error('Failed to fetch customer orders')
