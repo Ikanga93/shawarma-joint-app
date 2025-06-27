@@ -38,9 +38,23 @@ const MenuPage = () => {
         console.log('Fetching menu items from API (MenuPage)')
         const items = await ApiService.getMenuItems()
         
-        // Cache the results
-        sessionStorage.setItem('menuItems', JSON.stringify(items))
-        sessionStorage.setItem('menuItemsTimestamp', now.toString())
+        // Cache the results WITHOUT base64 images to prevent quota exceeded errors
+        const dataToCache = items.map(item => {
+          const { image_url, ...itemWithoutImage } = item
+          // Only store image URLs, not base64 data
+          return {
+            ...itemWithoutImage,
+            image_url: image_url && image_url.startsWith('data:') ? null : image_url
+          }
+        })
+        
+        try {
+          sessionStorage.setItem('menuItems', JSON.stringify(dataToCache))
+          sessionStorage.setItem('menuItemsTimestamp', now.toString())
+        } catch (quotaError) {
+          console.warn('SessionStorage quota exceeded, skipping cache:', quotaError)
+          // Continue without caching rather than breaking the app
+        }
         
         // Filter only available items
         const availableItems = items.filter(item => item.available)

@@ -65,14 +65,16 @@ export const BusinessProvider = ({ children }) => {
       const location = getActiveLocations().find(loc => loc.id === locationId)
       if (!location || location.schedule.type === 'variable') return null
       
+      // Get current time in Central Time (America/Chicago)
       const now = new Date()
+      const centralTime = new Date(now.toLocaleString("en-US", {timeZone: "America/Chicago"}))
       const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
-      const day = dayNames[now.getDay()]
+      const day = dayNames[centralTime.getDay()]
       const hours = location.schedule.hours[day]
       
       if (hours?.closed) return false
       
-      const currentTime = now.getHours() * 100 + now.getMinutes()
+      const currentTime = centralTime.getHours() * 100 + centralTime.getMinutes()
       const openTime = parseInt(hours?.open?.replace(':', ''))
       const closeTime = parseInt(hours?.close?.replace(':', ''))
       

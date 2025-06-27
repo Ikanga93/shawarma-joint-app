@@ -72,17 +72,31 @@ if (process.env.NODE_ENV === 'production') {
 // Set timezone to Central Time
 process.env.TZ = 'America/Chicago'
 
-// Helper function to get current Central Time
+// Helper function to get current Central Time as Date object
 const getCentralTime = () => {
-  return new Date().toLocaleString("en-US", {timeZone: "America/Chicago"})
+  return new Date()
 }
 
-// Helper function to format date for SQLite in Central Time
+// Helper function to format date for SQLite/PostgreSQL in Central Time
+// Returns ISO string that represents the Central Time moment
 const formatDateForDB = (date = new Date()) => {
-  return new Date(date.toLocaleString("en-US", {timeZone: "America/Chicago"}))
-    .toISOString()
-    .slice(0, 19)
-    .replace('T', ' ')
+  // If date is already a Date object, use it directly
+  // If it's a string, parse it first
+  const inputDate = date instanceof Date ? date : new Date(date)
+  
+  // Create a date in Central Time
+  const centralDate = new Date(inputDate.toLocaleString("en-US", {timeZone: "America/Chicago"}))
+  
+  // Return ISO string format for database storage
+  // This represents the Central Time moment in ISO format
+  return centralDate.toISOString()
+}
+
+// Helper function to get current Central Time as ISO string for database
+const getCurrentCentralTimeForDB = () => {
+  const now = new Date()
+  const centralTime = new Date(now.toLocaleString("en-US", {timeZone: "America/Chicago"}))
+  return centralTime.toISOString()
 }
 
 const __filename = fileURLToPath(import.meta.url)
@@ -154,10 +168,10 @@ app.use(express.json({ limit: '10mb' }))
 
 // Health check endpoint - FIRST for Railway
 app.get('/health', (req, res) => {
-  console.log(' Health check endpoint called')
+  console.log('⚡ Health check endpoint called')
   res.json({
     status: 'healthy',
-    timestamp: new Date().toISOString(),
+    timestamp: getCurrentCentralTimeForDB(),
     uptime: process.uptime(),
     environment: process.env.NODE_ENV,
     version: '1.0.0',
@@ -168,10 +182,10 @@ app.get('/health', (req, res) => {
 
 // Simple test endpoint for debugging 502 errors
 app.get('/test', (req, res) => {
-  console.log(' Test endpoint called')
+  console.log('⚡ Test endpoint called')
   res.json({ 
     message: 'Server is responding!', 
-    timestamp: new Date().toISOString(),
+    timestamp: getCurrentCentralTimeForDB(),
     port: process.env.PORT,
     host: req.get('host'),
     url: req.url,
@@ -301,9 +315,9 @@ app.put('/api/locations/:locationId', authenticateToken, authorizeRole(['admin']
     await query(`
       UPDATE locations 
       SET name = ?, type = ?, description = ?, current_location = ?, 
-          schedule = ?, phone = ?, status = ?, updated_at = CURRENT_TIMESTAMP
+          schedule = ?, phone = ?, status = ?, updated_at = ?
       WHERE id = ?
-    `, [name, type, description, currentLocation, schedule, phone, status, locationId])
+    `, [name, type, description, currentLocation, schedule, phone, status, getCurrentCentralTimeForDB(), locationId])
 
     const updatedLocation = await queryOne('SELECT * FROM locations WHERE id = ?', [locationId])
     res.json(updatedLocation)
@@ -626,19 +640,19 @@ app.post('/api/orders', async (req, res) => {
       `INSERT INTO orders (
         id, customer_name, customer_phone, customer_email, items, 
         subtotal, tax, total_amount, location_id, estimated_time, time_remaining,
-        status, user_id
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        status, user_id, order_date
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         orderId, customerName, customerPhone, customerEmail, JSON.stringify(items),
         subtotal, tax, total, locationId, estimatedTime, timeRemaining,
-        'pending_payment', userId
+        'pending_payment', userId, getCurrentCentralTimeForDB()
       ]
     )
 
     // Add initial status to history
     await query(
-      'INSERT INTO order_status_history (order_id, status) VALUES (?, ?)',
-      [orderId, 'pending_payment']
+      'INSERT INTO order_status_history (order_id, status, changed_at) VALUES (?, ?, ?)',
+      [orderId, 'pending_payment', getCurrentCentralTimeForDB()]
     )
 
     // Determine frontend URL dynamically
@@ -1092,8 +1106,8 @@ app.put('/api/menu/:id', authenticateToken, authorizeRole(['admin']), async (req
     const { name, description, price, category, emoji, available, image_url } = req.body
     
     await query(
-      'UPDATE menu_items SET name = ?, description = ?, price = ?, category = ?, emoji = ?, available = ?, image_url = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
-      [name, description, price, category, emoji, available, image_url, id]
+      'UPDATE menu_items SET name = ?, description = ?, price = ?, category = ?, emoji = ?, available = ?, image_url = ?, updated_at = ? WHERE id = ?',
+      [name, description, price, category, emoji, available, image_url, getCurrentCentralTimeForDB(), id]
     )
 
     res.json({ success: true })
@@ -1168,8 +1182,8 @@ app.put('/api/locations/:id', authenticateToken, authorizeRole(['admin']), async
     const { name, type, description, current_location, schedule, phone, status } = req.body
     
     const result = await query(
-      'UPDATE locations SET name = ?, type = ?, description = ?, current_location = ?, schedule = ?, phone = ?, status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
-      [name, type, description, current_location, schedule, phone, status, id]
+      'UPDATE locations SET name = ?, type = ?, description = ?, current_location = ?, schedule = ?, phone = ?, status = ?, updated_at = ? WHERE id = ?',
+      [name, type, description, current_location, schedule, phone, status, getCurrentCentralTimeForDB(), id]
     )
 
     if (result.changes === 0) {
@@ -1248,8 +1262,8 @@ app.post('/api/live-locations', authenticateToken, authorizeRole(['admin']), asy
     const finalAddress = current_address && current_address.trim() ? current_address.trim() : 'Location update in progress...'
 
     const result = await query(
-      'INSERT INTO live_locations (truck_name, current_address, latitude, longitude, description, hours_today, last_updated) VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)',
-      [truck_name, finalAddress, latitude, longitude, description, hours_today]
+      'INSERT INTO live_locations (truck_name, current_address, latitude, longitude, description, hours_today, last_updated) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      [truck_name, finalAddress, latitude, longitude, description, hours_today, getCurrentCentralTimeForDB()]
     )
 
     // Return the created item
@@ -1279,8 +1293,8 @@ app.put('/api/live-locations/:id', authenticateToken, authorizeRole(['admin']), 
     const { truck_name, current_address, latitude, longitude, description, hours_today, is_active } = req.body
     
     const result = await query(
-      'UPDATE live_locations SET truck_name = ?, current_address = ?, latitude = ?, longitude = ?, description = ?, hours_today = ?, is_active = ?, last_updated = CURRENT_TIMESTAMP WHERE id = ?',
-      [truck_name, current_address, latitude, longitude, description, hours_today, is_active, id]
+      'UPDATE live_locations SET truck_name = ?, current_address = ?, latitude = ?, longitude = ?, description = ?, hours_today = ?, is_active = ?, last_updated = ? WHERE id = ?',
+      [truck_name, current_address, latitude, longitude, description, hours_today, is_active, getCurrentCentralTimeForDB(), id]
     )
 
     if (result.changes === 0) {
@@ -1521,8 +1535,8 @@ app.post('/api/auth/login', async (req, res) => {
     // Update last login for admin
     if (user.role === 'admin') {
       await query(
-        'UPDATE admin_profiles SET last_login = CURRENT_TIMESTAMP WHERE user_id = ?',
-        [user.id]
+        'UPDATE admin_profiles SET last_login = ? WHERE user_id = ?',
+        [getCurrentCentralTimeForDB(), user.id]
       )
     }
 
@@ -1588,10 +1602,10 @@ app.post('/api/auth/refresh', async (req, res) => {
     // Verify refresh token
     const decoded = jwt.verify(refreshToken, process.env.JWT_SECRET || 'fallback-secret')
 
-    // Check if token exists in database
+    // Check if token exists in database and is not expired
     const token = await queryOne(
-      'SELECT * FROM auth_tokens WHERE token = ? AND type = ? AND expires_at > CURRENT_TIMESTAMP',
-      [refreshToken, 'refresh']
+      'SELECT * FROM auth_tokens WHERE token = ? AND type = ? AND expires_at > ?',
+      [refreshToken, 'refresh', getCurrentCentralTimeForDB()]
     )
 
     if (!token) {
@@ -2283,7 +2297,7 @@ app.delete('/api/admin/customers/:customerId', authenticateToken, authorizeRole(
       customerType: isRegisteredCustomer ? 'registered' : 'guest',
       customerName: isRegisteredCustomer ? `${customer.first_name} ${customer.last_name}` : customer.customer_name,
       deletedCounts,
-      timestamp: new Date().toISOString(),
+      timestamp: getCurrentCentralTimeForDB(),
       deletedBy: req.user.email
     })
 
@@ -2299,7 +2313,7 @@ app.delete('/api/admin/customers/:customerId', authenticateToken, authorizeRole(
         type: isRegisteredCustomer ? 'registered' : 'guest'
       },
       deletedCounts,
-      timestamp: new Date().toISOString(),
+      timestamp: getCurrentCentralTimeForDB(),
       deletedBy: req.user.email
     })
 
@@ -2435,7 +2449,7 @@ app.get('/api/admin/customers/:customerId/deletion-preview', authenticateToken, 
       previewCounts,
       sampleOrders,
       warning: 'This operation is irreversible. The customer and all their related data will be permanently deleted.',
-      timestamp: new Date().toISOString()
+      timestamp: getCurrentCentralTimeForDB()
     })
 
   } catch (error) {

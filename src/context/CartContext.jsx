@@ -67,35 +67,45 @@ export const CartProvider = ({ children }) => {
 
   // Save cart to localStorage whenever it changes (but only after initial load)
   useEffect(() => {
-    if (isLoaded) {
-      console.log('Saving cart to localStorage:', cartItems)
+    if (!isLoaded) return
+    
+    console.log('Saving cart to localStorage:', cartItems)
+    
+    // Optimize cart data for localStorage storage
+    const cartDataToStore = cartItems.map(item => {
+      const itemData = { ...item }
+      
+      // Keep image_url as just the filename/path, not full data URLs
+      // Remove large base64 image data to prevent localStorage quota exceeded errors
+      // If image_url is a data URL, don't save it to localStorage
+      if (itemData.image_url && itemData.image_url.startsWith('data:')) {
+        // Remove base64 data to save space, will be restored on load
+        delete itemData.image_url
+      }
+      
+      return itemData
+    })
+    
+    try {
+      localStorage.setItem('cart', JSON.stringify(cartDataToStore))
+    } catch (quotaError) {
+      console.warn('LocalStorage quota exceeded when saving cart, attempting with minimal data:', quotaError)
+      
+      // Fallback: save only essential cart data
+      const minimalCartData = cartItems.map(item => ({
+        id: item.id,
+        name: item.name,
+        price: item.price,
+        quantity: item.quantity,
+        selectedOptions: item.selectedOptions
+      }))
+      
       try {
-        // Only save essential data to localStorage to prevent quota issues
-        // Keep image_url as just the filename/path, not full data URLs
-        const cartItemsForStorage = cartItems.map(item => {
-          const { ...itemData } = item;
-          // If image_url is a data URL, don't save it to localStorage
-          if (itemData.image_url && itemData.image_url.startsWith('data:')) {
-            delete itemData.image_url;
-          }
-          return itemData;
-        });
-        localStorage.setItem('cart', JSON.stringify(cartItemsForStorage))
-      } catch (error) {
-        console.error('Error saving cart to localStorage:', error)
-        // If localStorage is full, try to clear it and save again
-        if (error.name === 'QuotaExceededError') {
-          try {
-            localStorage.removeItem('cart')
-            const cartItemsForStorage = cartItems.map(item => {
-              const { image_url, ...itemWithoutImage } = item;
-              return itemWithoutImage;
-            });
-            localStorage.setItem('cart', JSON.stringify(cartItemsForStorage))
-          } catch (secondError) {
-            console.error('Failed to save cart even after clearing localStorage:', secondError)
-          }
-        }
+        localStorage.setItem('cart', JSON.stringify(minimalCartData))
+      } catch (fallbackError) {
+        console.error('Failed to save cart even with minimal data:', fallbackError)
+        // Clear cart storage if even minimal data fails
+        localStorage.removeItem('cart')
       }
     }
   }, [cartItems, isLoaded])

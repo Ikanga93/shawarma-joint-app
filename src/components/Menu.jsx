@@ -22,7 +22,7 @@ const Menu = () => {
       setLoading(true)
       setError(null)
       
-      // Check if we have cached menu items
+      // Check if we have cached menu items (without images to save space)
       const cachedItems = sessionStorage.getItem('menuItems')
       const cacheTimestamp = sessionStorage.getItem('menuItemsTimestamp')
       const now = Date.now()
@@ -39,9 +39,23 @@ const Menu = () => {
       console.log('Fetching menu items from API')
       const data = await ApiService.getMenuItems()
       
-      // Cache the results
-      sessionStorage.setItem('menuItems', JSON.stringify(data))
-      sessionStorage.setItem('menuItemsTimestamp', now.toString())
+      // Cache the results WITHOUT base64 images to prevent quota exceeded errors
+      const dataToCache = data.map(item => {
+        const { image_url, ...itemWithoutImage } = item
+        // Only store image URLs, not base64 data
+        return {
+          ...itemWithoutImage,
+          image_url: image_url && image_url.startsWith('data:') ? null : image_url
+        }
+      })
+      
+      try {
+        sessionStorage.setItem('menuItems', JSON.stringify(dataToCache))
+        sessionStorage.setItem('menuItemsTimestamp', now.toString())
+      } catch (quotaError) {
+        console.warn('SessionStorage quota exceeded, skipping cache:', quotaError)
+        // Continue without caching rather than breaking the app
+      }
       
       // Process menu items to add options structure if not present
       const processedData = data.map(item => {
