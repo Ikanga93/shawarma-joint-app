@@ -136,6 +136,23 @@ const Cart = ({ isOpen, onClose }) => {
     }
   }
 
+  const getLocationAddress = (location) => {
+    // Try different possible field names for address
+    return location.current_location || 
+           location.address || 
+           location.location || 
+           location.street_address || 
+           'Address not available'
+  }
+
+  const getLocationHours = (location) => {
+    // Try different possible field names for hours
+    return location.schedule || 
+           location.hours || 
+           location.operating_hours || 
+           'Hours not available'
+  }
+
   const selectedLocationObj = locations.find(loc => loc.id === selectedLocation)
 
   const handleCheckout = async (e) => {
@@ -413,21 +430,18 @@ const Cart = ({ isOpen, onClose }) => {
                             onChange={handleLocationChange}
                           />
                           <div className="location-info">
-                            <div className="location-header">
+                            <div className="location-name">
                               {getLocationIcon(location.type)}
-                              <span className="location-name">{location.name}</span>
+                              <span className="restaurant-name">{location.name}</span>
                             </div>
-                            <div className="location-details">
-                              <p className="location-description">{location.description}</p>
-                              {location.current_location && (
-                                <p className="location-address">
-                                  📍 {location.current_location}
-                                </p>
-                              )}
+                            <div className="location-address">
+                              <span className="address-label">📍 Address:</span>
+                              <span className="address-text">{getLocationAddress(location)}</span>
                             </div>
-                            {location.schedule && (
-                              <p className="location-note">🕒 {location.schedule}</p>
-                            )}
+                            <div className="location-hours">
+                              <span className="hours-label">🕒 Hours:</span>
+                              <span className="hours-text">{getLocationHours(location)}</span>
+                            </div>
                           </div>
                         </label>
                       ))}

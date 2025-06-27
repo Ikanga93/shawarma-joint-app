@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { MapPin, Truck, Building, ChevronDown } from 'lucide-react'
+import { MapPin, Truck, Building, ChevronDown, Clock } from 'lucide-react'
 import { useBusinessConfig } from '../context/BusinessContext'
 import { LOCATION_TYPES } from '../config/businessConfig'
 import './LocationSelector.css'
@@ -47,6 +47,19 @@ const LocationSelector = () => {
       : { text: 'Closed', color: 'red' }
   }
 
+  const formatHours = (location) => {
+    if (location.type === LOCATION_TYPES.MOBILE) {
+      return 'Check social media for schedule'
+    }
+    
+    if (location.hours) {
+      // Simple format for now - can be enhanced based on your hours data structure
+      return location.hours.general || 'Mon-Sun: 11AM-9PM'
+    }
+    
+    return 'Mon-Sun: 11AM-9PM'
+  }
+
   return (
     <div className="location-selector">
       <button 
@@ -66,7 +79,8 @@ const LocationSelector = () => {
       {isOpen && (
         <div className="location-dropdown">
           <div className="dropdown-header">
-            <h4>Choose Location</h4>
+            <h4>Choose Your Location</h4>
+            <p>Select the location nearest to you</p>
           </div>
           
           <div className="location-list">
@@ -83,22 +97,43 @@ const LocationSelector = () => {
                     setIsOpen(false)
                   }}
                 >
-                  <div className="location-info">
+                  <div className="location-card">
                     <div className="location-header">
-                      {getLocationIcon(location.type)}
-                      <span className="location-name">{location.name}</span>
+                      <div className="location-title">
+                        {getLocationIcon(location.type)}
+                        <h5 className="restaurant-name">{location.name}</h5>
+                      </div>
                       <span className={`status ${status.color}`}>
                         {status.text}
                       </span>
                     </div>
-                    <p className="location-description">
-                      {location.description}
-                    </p>
-                    {location.address && (
-                      <p className="location-address">
-                        {location.address.street}, {location.address.city}
-                      </p>
-                    )}
+                    
+                    <div className="location-details">
+                      {location.address && (
+                        <div className="address-section">
+                          <MapPin size={14} />
+                          <span className="address-text">
+                            {location.address.street}<br />
+                            {location.address.city}, {location.address.state} {location.address.zip}
+                          </span>
+                        </div>
+                      )}
+                      
+                      <div className="hours-section">
+                        <Clock size={14} />
+                        <span className="hours-text">
+                          {formatHours(location)}
+                        </span>
+                      </div>
+                      
+                      {location.description && (
+                        <div className="description-section">
+                          <p className="location-description">
+                            {location.description}
+                          </p>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </button>
               )

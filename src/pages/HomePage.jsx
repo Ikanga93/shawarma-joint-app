@@ -182,28 +182,48 @@ const HomePage = () => {
       {/* Featured Testimonial Section */}
       <section className="featured-testimonial">
         <div className="container">
-          <div className="testimonials-slider">
-            <div className="testimonials-track">
-              <div className="testimonial-card">
-                <div className="testimonial-image">
-                  <img src="/uploads/steak-shawar-bowl-image.jpg" alt="Delicious Beef Shawarma Sandwich" />
-                </div>
-                <div className="testimonial-content">
-                  <p>
-                    "Lunchtime delight! Just devoured a divine beef shawarma sandwich! 🥙🤤<br/>
-                    Overflowing with succulent beef, crisp veggies, and a heavenly tahini drizzle. Taste buds, meet paradise! 😍"
-                  </p>
+          <h2 className="section-title">Customer Favorites</h2>
+          <p className="section-subtitle">
+            See what our customers are raving about - fresh, authentic, and delicious!
+          </p>
+          
+          <div className="testimonials-grid">
+            <div className="testimonial-card">
+              <div className="testimonial-image">
+                <img src="/uploads/steak-shawar-bowl-image.jpg" alt="Delicious Beef Shawarma Sandwich" />
+              </div>
+              <div className="testimonial-content">
+                <p>
+                  Lunchtime delight! Just devoured a divine beef shawarma sandwich! 
+                  Overflowing with succulent beef, crisp veggies, and a heavenly tahini drizzle. 
+                  Taste buds, meet paradise! 😍
+                </p>
+                <div className="testimonial-author">
+                  <div className="author-avatar">🥙</div>
+                  <div className="author-info">
+                    <h4>Sarah M.</h4>
+                    <span>Regular Customer</span>
+                  </div>
                 </div>
               </div>
+            </div>
 
-              <div className="testimonial-card">
-                <div className="testimonial-image">
-                  <img src="/uploads/falafel-bowl-image.jpg" alt="Fresh Falafel Bowl" />
-                </div>
-                <div className="testimonial-content">
-                  <p>
-                    "Dive into our Falafel Bowl! Nestled on a bed of rice, choose between creamy hummus or crisp lettuce, add your favorite five toppings, and drizzle with your choice of sauce. Customize your meal for the ultimate flavor experience! 🥙✨"
-                  </p>
+            <div className="testimonial-card">
+              <div className="testimonial-image">
+                <img src="/uploads/falafel-bowl-image.jpg" alt="Fresh Falafel Bowl" />
+              </div>
+              <div className="testimonial-content">
+                <p>
+                  Dive into our Falafel Bowl! Nestled on a bed of rice, choose between creamy hummus 
+                  or crisp lettuce, add your favorite five toppings, and drizzle with your choice of sauce. 
+                  Customize your meal for the ultimate flavor experience! ✨
+                </p>
+                <div className="testimonial-author">
+                  <div className="author-avatar">🌱</div>
+                  <div className="author-info">
+                    <h4>Ahmed K.</h4>
+                    <span>Food Enthusiast</span>
+                  </div>
                 </div>
               </div>
             </div>

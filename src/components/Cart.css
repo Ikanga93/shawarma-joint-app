@@ -429,7 +429,7 @@
 
 .location-option {
   display: block;
-  padding: 16px;
+  padding: 0;
   background: white;
   border: 2px solid #e0e0e0;
   border-radius: 12px;
@@ -438,6 +438,9 @@
   transition: all 0.3s ease;
   position: relative;
   touch-action: manipulation;
+  overflow: hidden;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .location-option:hover {
@@ -454,68 +457,108 @@
 }
 
 .location-option input[type="radio"]:checked + .location-info {
-  background: rgba(215, 48, 39, 0.05);
-  border-radius: 8px;
-  border-left: 4px solid var(--primary-red);
-  padding: 12px;
-  margin: -4px;
+  background: linear-gradient(135deg, rgba(27, 94, 32, 0.05), rgba(76, 175, 80, 0.05));
+}
+
+.location-option:has(input[type="radio"]:checked) {
+  border-color: var(--primary-green);
+  border-left: 4px solid var(--primary-green);
+  background: linear-gradient(135deg, rgba(27, 94, 32, 0.03), rgba(255, 255, 255, 1));
+}
+
+.location-option:has(input[type="radio"]:checked)::after {
+  content: '✓';
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: var(--primary-green);
+  color: white;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: bold;
 }
 
 .location-info {
+  padding: 16px;
   transition: all 0.3s ease;
   width: 100%;
-}
-
-.location-header {
+  box-sizing: border-box;
   display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 12px;
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: 10px;
 }
 
 .location-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.restaurant-name {
   font-weight: 700;
   color: var(--dark-brown);
   font-size: 1.1rem;
-  margin: 0;
-  flex: 1;
-  min-width: 0; /* Allow text to wrap properly */
-}
-
-.location-details {
-  width: 100%;
-  margin-top: 8px;
-}
-
-.location-description {
-  font-size: 0.9rem;
-  color: var(--text-light);
-  margin: 0 0 12px 0;
-  line-height: 1.4;
-  word-wrap: break-word;
+  line-height: 1.3;
 }
 
 .location-address {
-  font-size: 0.95rem;
-  color: var(--dark-brown);
-  font-weight: 600;
-  margin: 8px 0;
-  padding: 8px 12px;
-  background: rgba(46, 74, 46, 0.1);
-  border-radius: 8px;
-  display: block;
-  word-wrap: break-word;
-  line-height: 1.4;
-  border-left: 3px solid #4CAF50;
+  padding: 10px;
+  background: rgba(76, 175, 80, 0.08);
+  border-left: 3px solid var(--primary-green);
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
 }
 
-.location-note {
-  font-size: 0.85rem;
+.address-label {
+  font-size: 0.75rem;
+  font-weight: 600;
   color: var(--text-light);
-  margin: 8px 0 0 0;
-  font-style: italic;
-  word-wrap: break-word;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.address-text {
+  font-size: 0.9rem;
+  color: var(--primary-green-dark);
+  font-weight: 600;
+  line-height: 1.4;
+  word-break: break-word;
+  display: block;
+}
+
+.location-hours {
+  padding: 10px;
+  background: rgba(255, 87, 34, 0.08);
+  border-left: 3px solid var(--primary-red);
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.hours-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-light);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.hours-text {
+  font-size: 0.9rem;
+  color: var(--primary-red-dark);
+  font-weight: 600;
+  line-height: 1.4;
+  word-break: break-word;
+  display: block;
 }
 
 /* Customer Info Form */
@@ -896,6 +939,7 @@
   .info-row {
     flex-direction: column;
     gap: 4px;
+    align-items: flex-start;
   }
   
   .info-label {
@@ -906,41 +950,112 @@
     text-align: left;
   }
   
-  .location-details {
-    margin-left: 0;
-    margin-top: 8px;
-    width: 100%;
-  }
-  
+  /* Mobile Location Selection - Compact Design */
   .location-option {
-    padding: 12px;
+    margin-bottom: 10px;
+    border-radius: 12px;
+    border-width: 1px;
   }
   
-  .location-header {
-    flex-direction: column;
-    align-items: flex-start;
+  .location-info {
+    padding: 12px;
     gap: 8px;
-    margin-bottom: 8px;
   }
   
   .location-name {
+    margin-bottom: 4px;
+  }
+  
+  .restaurant-name {
     font-size: 1rem;
+    font-weight: 600;
+  }
+  
+  .location-address,
+  .location-hours {
+    padding: 8px 10px;
+    border-radius: 6px;
+  }
+  
+  .address-label,
+  .hours-label {
+    font-size: 0.7rem;
+    margin-bottom: 2px;
+  }
+  
+  .address-text,
+  .hours-text {
+    font-size: 0.85rem;
     line-height: 1.3;
   }
   
-  .location-address {
-    font-size: 0.9rem;
-    padding: 6px 10px;
-    margin: 6px 0;
+  /* Smaller checkmark on mobile */
+  .location-option:has(input[type="radio"]:checked)::after {
+    top: 8px;
+    right: 8px;
+    width: 18px;
+    height: 18px;
+    font-size: 11px;
+  }
+}
+
+/* Extra Small Mobile Styles (max-width: 375px) */
+@media (max-width: 375px) {
+  .location-info {
+    padding: 10px;
+    gap: 6px;
   }
   
-  .location-description {
-    font-size: 0.85rem;
-    margin: 0 0 8px 0;
+  .restaurant-name {
+    font-size: 0.95rem;
   }
   
-  .location-note {
+  .location-address,
+  .location-hours {
+    padding: 6px 8px;
+  }
+  
+  .address-label,
+  .hours-label {
+    font-size: 0.65rem;
+  }
+  
+  .address-text,
+  .hours-text {
     font-size: 0.8rem;
+  }
+  
+  .location-option:has(input[type="radio"]:checked)::after {
+    top: 6px;
+    right: 6px;
+    width: 16px;
+    height: 16px;
+    font-size: 10px;
+  }
+}
+
+/* Medium Mobile Styles (481px - 767px) */
+@media (min-width: 481px) and (max-width: 767px) {
+  .location-name {
+    margin-bottom: 8px;
+  }
+  
+  .restaurant-name {
+    font-size: 1.15rem;
+  }
+  
+  .location-info {
+    gap: 12px;
+  }
+  
+  .location-address,
+  .location-hours {
+    padding: 12px;
+  }
+  
+  .address-text,
+  .hours-text {
+    font-size: 1rem;
   }
 }
 
@@ -996,38 +1111,34 @@
   
   .info-row {
     flex-direction: row;
+    align-items: flex-start;
   }
   
   .info-value {
     text-align: right;
   }
   
-  .location-details {
-    margin-left: 0;
-    margin-top: 0;
-    width: 100%;
-  }
-  
-  .location-header {
-    flex-direction: row;
-    align-items: center;
-    gap: 12px;
-    margin-bottom: 12px;
+  /* Tablet location styles */
+  .location-info {
+    gap: 14px;
   }
   
   .location-name {
-    font-size: 1.1rem;
+    margin-bottom: 10px;
   }
   
-  .location-address {
-    font-size: 0.95rem;
-    padding: 8px 12px;
-    margin: 8px 0;
+  .restaurant-name {
+    font-size: 1.2rem;
   }
   
-  .location-description {
-    font-size: 0.9rem;
-    margin: 0 0 12px 0;
+  .location-address,
+  .location-hours {
+    padding: 14px;
+  }
+  
+  .address-text,
+  .hours-text {
+    font-size: 1rem;
   }
 }
 
@@ -1050,6 +1161,29 @@
   .cart-item-image {
     width: 100px;
     height: 100px;
+  }
+  
+  /* Desktop location styles */
+  .location-info {
+    gap: 16px;
+  }
+  
+  .location-name {
+    margin-bottom: 12px;
+  }
+  
+  .restaurant-name {
+    font-size: 1.3rem;
+  }
+  
+  .location-address,
+  .location-hours {
+    padding: 16px;
+  }
+  
+  .address-text,
+  .hours-text {
+    font-size: 1.1rem;
   }
 }
 
