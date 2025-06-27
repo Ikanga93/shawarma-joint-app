@@ -2,6 +2,8 @@ import pg from 'pg'
 import sqlite3 from 'sqlite3'
 import path from 'path'
 import { fileURLToPath } from 'url'
+import bcrypt from 'bcryptjs'
+import { v4 as uuidv4 } from 'uuid'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -184,6 +186,9 @@ export const initializeDatabase = async () => {
     
     // Run migrations for existing tables
     await runMigrations()
+    
+    // Create default admin user
+    await createDefaultAdminUser()
     
     console.log('✅ Database tables initialized successfully')
   } catch (error) {
@@ -582,6 +587,50 @@ const initializePostgreSQLTables = async () => {
     last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
   )`)
+}
+
+// Helper function to create default admin user
+const createDefaultAdminUser = async () => {
+  try {
+    const adminEmail = process.env.ADMIN_USERNAME || process.env.ADMIN_EMAIL || 'admin@mosburrito.com'
+    const adminPassword = process.env.ADMIN_PASSWORD || 'admin123'
+    
+    // Check if admin user already exists
+    const existingAdmin = await queryOne(
+      'SELECT * FROM users WHERE email = ? OR role = ?',
+      [adminEmail, 'admin']
+    )
+    
+    if (existingAdmin) {
+      console.log('✅ Default admin user already exists')
+      return
+    }
+    
+    console.log('🔧 Creating default admin user...')
+    
+    // Hash password
+    const salt = await bcrypt.genSalt(10)
+    const passwordHash = await bcrypt.hash(adminPassword, salt)
+    
+    // Create admin user
+    const userId = `ADMIN-${uuidv4().substring(0, 8).toUpperCase()}`
+    await query(
+      'INSERT INTO users (id, email, password_hash, role, first_name, last_name) VALUES (?, ?, ?, ?, ?, ?)',
+      [userId, adminEmail, passwordHash, 'admin', 'Admin', 'User']
+    )
+    
+    // Create admin profile
+    await query('INSERT INTO admin_profiles (user_id) VALUES (?)', [userId])
+    
+    console.log('✅ Default admin user created successfully')
+    console.log(`   Email: ${adminEmail}`)
+    console.log(`   Password: ${adminPassword}`)
+    console.log('   ⚠️  Please change the default password after first login!')
+    
+  } catch (error) {
+    console.error('❌ Error creating default admin user:', error)
+    // Don't throw error to prevent app startup failure
+  }
 }
 
 export default db

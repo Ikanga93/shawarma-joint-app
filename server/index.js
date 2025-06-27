@@ -180,6 +180,42 @@ app.get('/health', (req, res) => {
   })
 })
 
+// Admin health check endpoint for debugging production issues
+app.get('/health/admin', async (req, res) => {
+  try {
+    console.log('🔍 Admin health check called')
+    
+    // Check if any admin users exist
+    const adminCount = await queryOne('SELECT COUNT(*) as count FROM users WHERE role = ?', ['admin'])
+    const adminUsers = await queryAll('SELECT id, email, role, created_at FROM users WHERE role = ?', ['admin'])
+    
+    // Check admin profiles
+    const adminProfilesCount = await queryOne('SELECT COUNT(*) as count FROM admin_profiles', [])
+    
+    res.json({
+      status: 'healthy',
+      timestamp: getCurrentCentralTimeForDB(),
+      adminUsersCount: adminCount.count,
+      adminProfilesCount: adminProfilesCount.count,
+      adminUsers: adminUsers.map(user => ({
+        id: user.id,
+        email: user.email,
+        created_at: user.created_at
+      })),
+      environment: process.env.NODE_ENV,
+      hasAdminUsername: !!process.env.ADMIN_USERNAME,
+      hasAdminPassword: !!process.env.ADMIN_PASSWORD
+    })
+  } catch (error) {
+    console.error('❌ Admin health check error:', error)
+    res.status(500).json({
+      status: 'error',
+      error: error.message,
+      timestamp: getCurrentCentralTimeForDB()
+    })
+  }
+})
+
 // Simple test endpoint for debugging 502 errors
 app.get('/test', (req, res) => {
   console.log('⚡ Test endpoint called')
@@ -1492,7 +1528,10 @@ app.post('/api/auth/login', async (req, res) => {
   try {
     const { email, phone, password } = req.body
 
+    console.log('🔐 Login attempt:', { email, phone: phone ? '***' : undefined })
+
     if ((!email && !phone) || !password) {
+      console.log('❌ Login failed: Missing credentials')
       return res.status(400).json({ error: 'Email/phone and password are required' })
     }
 
@@ -1503,14 +1542,20 @@ app.post('/api/auth/login', async (req, res) => {
     )
 
     if (!user) {
+      console.log('❌ Login failed: User not found for:', email || phone)
       return res.status(401).json({ error: 'Invalid credentials' })
     }
+
+    console.log('👤 User found:', { id: user.id, email: user.email, role: user.role })
 
     // Check password
     const isValidPassword = await bcrypt.compare(password, user.password_hash)
     if (!isValidPassword) {
+      console.log('❌ Login failed: Invalid password for user:', user.email)
       return res.status(401).json({ error: 'Invalid credentials' })
     }
+
+    console.log('✅ Password validated for user:', user.email)
 
     // Generate tokens
     const accessToken = jwt.sign(
@@ -1534,10 +1579,16 @@ app.post('/api/auth/login', async (req, res) => {
 
     // Update last login for admin
     if (user.role === 'admin') {
-      await query(
-        'UPDATE admin_profiles SET last_login = ? WHERE user_id = ?',
-        [getCurrentCentralTimeForDB(), user.id]
-      )
+      try {
+        await query(
+          'UPDATE admin_profiles SET last_login = ? WHERE user_id = ?',
+          [getCurrentCentralTimeForDB(), user.id]
+        )
+        console.log('✅ Admin last login updated')
+      } catch (adminUpdateError) {
+        console.warn('⚠️ Failed to update admin last login:', adminUpdateError.message)
+        // Don't fail the login for this
+      }
     }
 
     // Get user's assigned locations if admin
@@ -1545,29 +1596,38 @@ app.post('/api/auth/login', async (req, res) => {
     let currentLocation = null
     
     if (user.role === 'admin') {
-      assignedLocations = await queryAll(`
-        SELECT ul.*, l.name as location_name, l.type, l.description, l.status
-        FROM user_locations ul
-        JOIN locations l ON ul.location_id = l.id
-        WHERE ul.user_id = ? AND ul.is_active = true
-        ORDER BY ul.assigned_at DESC
-      `, [user.id])
+      try {
+        assignedLocations = await queryAll(`
+          SELECT ul.*, l.name as location_name, l.type, l.description, l.status
+          FROM user_locations ul
+          JOIN locations l ON ul.location_id = l.id
+          WHERE ul.user_id = ? AND ul.is_active = true
+          ORDER BY ul.assigned_at DESC
+        `, [user.id])
 
-      // Get current location from admin profile
-      const adminProfile = await queryOne(`
-        SELECT ap.current_location_id, l.name as current_location_name
-        FROM admin_profiles ap
-        LEFT JOIN locations l ON ap.current_location_id = l.id
-        WHERE ap.user_id = ?
-      `, [user.id])
+        // Get current location from admin profile
+        const adminProfile = await queryOne(`
+          SELECT ap.current_location_id, l.name as current_location_name
+          FROM admin_profiles ap
+          LEFT JOIN locations l ON ap.current_location_id = l.id
+          WHERE ap.user_id = ?
+        `, [user.id])
 
-      if (adminProfile && adminProfile.current_location_id) {
-        currentLocation = {
-          id: adminProfile.current_location_id,
-          name: adminProfile.current_location_name
+        if (adminProfile && adminProfile.current_location_id) {
+          currentLocation = {
+            id: adminProfile.current_location_id,
+            name: adminProfile.current_location_name
+          }
         }
+        
+        console.log('✅ Admin locations loaded:', { assignedCount: assignedLocations.length, currentLocation: currentLocation?.name })
+      } catch (locationError) {
+        console.warn('⚠️ Failed to load admin locations:', locationError.message)
+        // Continue with empty locations rather than failing
       }
     }
+
+    console.log('✅ Login successful for:', user.email)
 
     res.json({
       success: true,
@@ -1585,8 +1645,16 @@ app.post('/api/auth/login', async (req, res) => {
       refreshToken
     })
   } catch (error) {
-    console.error('Login error:', error)
-    res.status(500).json({ error: 'Login failed' })
+    console.error('❌ Login error:', error)
+    console.error('Error details:', {
+      message: error.message,
+      stack: error.stack,
+      code: error.code
+    })
+    res.status(500).json({ 
+      error: 'Login failed',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    })
   }
 })
 
