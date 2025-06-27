@@ -1,231 +1,226 @@
-# Fernando's Food Truck - Complete Order Management System
+# 🥙 Shawarma Joint - Mediterranean Restaurant App
 
-A full-stack food truck application with real-time order management, Stripe payment processing, and customer order tracking.
+A modern, full-stack restaurant web application for **Shawarma Joint**, a Mediterranean restaurant in Champaign-Urbana. Built with React, Supabase, and deployed on Vercel.
 
-## Features
+![Shawarma Joint](public/shawarma-joint-logo.jpg)
 
-### Customer Features
-- 🌮 Browse menu with real-time availability
-- 🛒 Shopping cart with location selection
-- 💳 Secure Stripe payment processing
-- 📱 Real-time order tracking
-- 📍 Multiple pickup locations support
+## 🌟 Features
 
-### Restaurant Admin Features
-- 📊 Real-time order dashboard
-- 🔔 Live order notifications
-- ⏱️ Order status management with timers
-- 📋 Menu management
-- 📍 Location management
-- ⚙️ Business settings
+### 🍽️ Customer Experience
+- **Beautiful Homepage** with video background and modern design
+- **Interactive Menu** with categories (Shawarma, Kebabs, Mediterranean Plates, etc.)
+- **User Authentication** - Register, login, and manage account
+- **Shopping Cart** with real-time updates
+- **Order Placement** with customer information
+- **Responsive Design** - works on all devices
+- **Real Customer Reviews** from Google Reviews
 
-### Technical Features
-- 🔄 Real-time updates with Socket.IO
-- 💾 SQLite database for order storage
-- 🔐 Secure admin authentication
-- 📱 Responsive design
-- 🎨 Modern UI with animations
+### 🎨 Design & Branding
+- **Custom Logo Integration** with brand colors
+- **Mediterranean Theme** with green (#7CB342) and orange-red (#FF5722) color scheme
+- **Professional Typography** with gradient effects
+- **Video Background** for engaging hero section
+- **Modern UI/UX** following best practices
 
-## Tech Stack
+### 🔧 Technical Features
+- **React 18** with modern hooks and functional components
+- **Supabase Backend** for database, authentication, and real-time features
+- **Row Level Security** for data protection
+- **Responsive CSS** with mobile-first approach
+- **Environment Configuration** for development and production
+- **SEO Optimized** with proper meta tags
+
+## 🏗️ Tech Stack
 
 ### Frontend
-- React 18
-- React Router
-- Stripe Elements
-- Socket.IO Client
-- Lucide React Icons
-- CSS3 with custom properties
+- **React 18** - Modern JavaScript framework
+- **React Router** - Client-side routing
+- **Lucide React** - Beautiful icons
+- **CSS3** - Custom styling with flexbox and grid
 
-### Backend
-- Node.js with Express
-- SQLite database
-- Stripe API
-- Socket.IO
-- UUID for order IDs
+### Backend & Database
+- **Supabase** - Backend-as-a-Service
+  - PostgreSQL database
+  - Authentication system
+  - Real-time subscriptions
+  - Row Level Security (RLS)
+  - Auto-generated APIs
 
-## Setup Instructions
+### Deployment
+- **Vercel** - Frontend hosting and deployment
+- **GitHub** - Version control and CI/CD
 
-### 1. Install Dependencies
+### Development Tools
+- **Vite** - Fast build tool and dev server
+- **ESLint** - Code linting
+- **Concurrently** - Run multiple commands
+
+## 🚀 Quick Start
+
+### Prerequisites
+- Node.js 18+ 
+- npm or yarn
+- Supabase account
+- Vercel account (for deployment)
+
+### Local Development
+
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/your-username/shawarma-joint-app.git
+   cd shawarma-joint-app
+   ```
+
+2. **Install dependencies**
+   ```bash
+   npm install
+   ```
+
+3. **Set up environment variables**
+   ```bash
+   # Copy the example file
+   cp env.example .env
+   
+   # Edit .env with your Supabase credentials
+   VITE_SUPABASE_URL=your_supabase_project_url
+   VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+   ```
+
+4. **Set up Supabase database**
+   - Create a new Supabase project
+   - Run the SQL from `supabase-schema.sql` in your Supabase SQL Editor
+   - Get your project URL and API key from Settings > API
+
+5. **Start development server**
+   ```bash
+   npm run dev
+   ```
+
+6. **Open your browser**
+   - Frontend: http://localhost:5173
+   - Your app should now be running locally!
+
+## 🌐 Deployment
+
+This app is designed to be deployed using **Supabase + Vercel** for the best developer experience and performance.
+
+### Quick Deploy to Vercel
+
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/your-username/shawarma-joint-app)
+
+### Manual Deployment
+
+For detailed deployment instructions, see [DEPLOYMENT.md](./DEPLOYMENT.md)
+
+**Quick Steps:**
+1. Create a Supabase project and run the schema
+2. Push your code to GitHub
+3. Connect your GitHub repo to Vercel
+4. Add environment variables in Vercel
+5. Deploy!
+
+## 📊 Database Schema
+
+The app uses a comprehensive database schema with the following main tables:
+
+- **users** - User profiles and authentication
+- **menu_categories** - Menu organization (Shawarma, Kebabs, etc.)
+- **menu_items** - Individual menu items with pricing
+- **orders** - Customer orders with status tracking
+- **order_items** - Individual items within orders
+- **customer_profiles** - Extended customer information
+
+All tables include Row Level Security (RLS) policies for data protection.
+
+## 🎯 Business Information
+
+**Shawarma Joint**
+- **Address**: 627 East Green Street, Champaign, IL
+- **Phone**: (217) 552-1320
+- **Email**: info@shawarmajointerestaurant.com
+- **Facebook**: [ShawarmaJointCU](https://www.facebook.com/ShawarmaJointCU/)
+- **Cuisine**: Mediterranean
+- **Tagline**: "From our kitchen to your plate - the best Mediterranean food (and the largest portions 👀) in Champaign-Urbana"
+
+## 🛠️ Development
+
+### Project Structure
+```
+shawarma-joint-app/
+├── public/                 # Static assets
+├── src/
+│   ├── components/        # Reusable components
+│   ├── pages/            # Page components
+│   ├── lib/              # Utilities and configurations
+│   ├── config/           # Business configuration
+│   └── assets/           # Images, videos, etc.
+├── supabase-schema.sql   # Database schema
+├── vercel.json          # Vercel configuration
+└── DEPLOYMENT.md        # Deployment guide
+```
+
+### Available Scripts
 
 ```bash
-npm install
+npm run dev          # Start development server
+npm run build        # Build for production
+npm run preview      # Preview production build
+npm run lint         # Run ESLint
 ```
 
-### 2. Stripe Configuration
-
-1. Create a Stripe account at [stripe.com](https://stripe.com)
-2. Get your API keys from the Stripe Dashboard
-3. Create a `.env` file in the root directory:
-
-```env
-# Stripe Configuration
-STRIPE_PUBLISHABLE_KEY=pk_test_your_stripe_publishable_key_here
-STRIPE_SECRET_KEY=sk_test_your_stripe_secret_key_here
-STRIPE_WEBHOOK_SECRET=whsec_your_webhook_secret_here
-
-# Server Configuration
-PORT=3001
-NODE_ENV=development
-```
-
-4. Set the frontend environment variable:
+### Environment Variables
 
 ```bash
-# For development, create .env.local
-VITE_STRIPE_PUBLISHABLE_KEY=pk_test_your_stripe_publishable_key_here
+# Supabase
+VITE_SUPABASE_URL=your_supabase_project_url
+VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+
+# Optional: Stripe for payments
+VITE_STRIPE_PUBLISHABLE_KEY=your_stripe_key
+
+# App Configuration
+VITE_APP_NAME=Shawarma Joint
+VITE_APP_URL=http://localhost:5173
 ```
 
-### 3. Database Setup
+## 🎨 Customization
 
-The SQLite database will be created automatically when you start the server. No additional setup required.
+### Branding
+- Logo: Replace `public/shawarma-joint-logo.jpg`
+- Colors: Update CSS custom properties in `src/index.css`
+- Business info: Edit `src/config/businessConfig.js`
 
-### 4. Start the Application
+### Menu
+- Add/edit menu items in Supabase dashboard
+- Categories and items are managed through the database
+- Images can be stored in Supabase Storage
 
-```bash
-# Start both frontend and backend
-npm run dev
-
-# Or start them separately:
-# Backend only
-npm run server
-
-# Frontend only (in another terminal)
-npm start
-```
-
-The application will be available at:
-- Frontend: http://localhost:5173
-- Backend API: http://localhost:3001
-
-## Usage
-
-### For Customers
-
-1. **Browse Menu**: Visit the homepage to see available items
-2. **Add to Cart**: Click "Add to Cart" on menu items
-3. **Checkout**: 
-   - Click the cart icon to open cart
-   - Select pickup location
-   - Enter customer information
-   - Click "Continue to Payment"
-4. **Payment**: Enter card details (use Stripe test cards)
-5. **Track Order**: Automatically redirected to order tracking page
-
-### For Restaurant Staff
-
-1. **Login**: Visit `/admin-login` or click "Staff" in footer
-   - Username: `fernando`
-   - Password: `admin123`
-2. **Dashboard**: View and manage orders in real-time
-3. **Order Management**:
-   - Confirm pending orders
-   - Start cooking confirmed orders
-   - Mark orders as ready
-   - Complete orders when picked up
-
-## Stripe Test Cards
-
-Use these test card numbers for development:
-
-- **Successful payment**: 4242 4242 4242 4242
-- **Declined payment**: 4000 0000 0000 0002
-- **Requires authentication**: 4000 0025 0000 3155
-
-Use any future expiry date, any 3-digit CVC, and any postal code.
-
-## API Endpoints
-
-### Orders
-- `POST /api/orders` - Create new order
-- `GET /api/orders` - Get all orders (admin)
-- `GET /api/orders/:orderId` - Get specific order
-- `PATCH /api/orders/:orderId/status` - Update order status
-
-### Payments
-- `POST /api/create-payment-intent` - Create Stripe payment intent
-- `POST /api/webhook` - Stripe webhook handler
-
-## Real-time Features
-
-The application uses Socket.IO for real-time updates:
-
-- **New orders** appear instantly on admin dashboard
-- **Order status changes** update customer tracking in real-time
-- **Cooking timers** count down automatically
-- **Desktop notifications** for new orders (admin)
-
-## Database Schema
-
-### Orders Table
-- `id` - Unique order ID (ORD-XXXXXXXX)
-- `customer_name` - Customer name
-- `customer_phone` - Customer phone
-- `customer_email` - Customer email (optional)
-- `items` - JSON array of ordered items
-- `subtotal` - Order subtotal
-- `tax` - Tax amount
-- `total` - Total amount
-- `status` - Order status (pending, confirmed, cooking, ready, completed)
-- `location_id` - Pickup location ID
-- `order_time` - Order timestamp
-- `estimated_time` - Estimated preparation time
-- `time_remaining` - Remaining cooking time
-- `stripe_payment_intent_id` - Stripe payment ID
-- `payment_status` - Payment status
-
-## Customization
-
-The application is built with a flexible business configuration system. You can customize:
-
-- Business name and branding
-- Menu items and pricing
-- Locations and schedules
-- Contact information
-- Features and capabilities
-
-See `src/config/businessConfig.js` for configuration options.
-
-## Deployment
-
-### Frontend (Vercel/Netlify)
-1. Build the frontend: `npm run build`
-2. Deploy the `dist` folder
-3. Set environment variables in your hosting platform
-
-### Backend (Railway/Heroku)
-1. Deploy the server folder
-2. Set environment variables
-3. Configure Stripe webhooks to point to your deployed backend
-
-## Troubleshooting
-
-### Common Issues
-
-1. **Orders not appearing**: Check if backend server is running on port 3001
-2. **Payment failing**: Verify Stripe keys are correctly set
-3. **Real-time updates not working**: Check Socket.IO connection in browser console
-4. **Database errors**: Ensure write permissions in project directory
-
-### Development Tips
-
-- Use browser dev tools to monitor Socket.IO connections
-- Check server logs for API errors
-- Use Stripe Dashboard to monitor test payments
-- Enable browser notifications for order alerts
-
-## Contributing
+## 🤝 Contributing
 
 1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Test thoroughly
-5. Submit a pull request
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
-## License
+## 📝 License
 
-This project is licensed under the MIT License.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## Support
+## 🙏 Acknowledgments
 
-For support or questions, please contact the development team or create an issue in the repository. # mo-s-burrito-app
-# shawarma-joint-app
+- **Real Customer Reviews** from Google Reviews
+- **DiceBear Personas** for avatar generation
+- **Supabase** for amazing backend services
+- **Vercel** for seamless deployment
+- **React Community** for excellent documentation
+
+## 📞 Support
+
+- **Issues**: [GitHub Issues](https://github.com/your-username/shawarma-joint-app/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/your-username/shawarma-joint-app/discussions)
+- **Email**: your-email@example.com
+
+---
+
+**Made with ❤️ for Shawarma Joint** - Serving the best Mediterranean food in Champaign-Urbana!
