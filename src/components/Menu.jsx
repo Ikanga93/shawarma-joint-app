@@ -155,10 +155,10 @@ const Menu = () => {
     const initialOptions = {};
     
     item.options.forEach(optionGroup => {
-      if (optionGroup.required && !optionGroup.multiSelect) {
+      if (optionGroup.is_required && optionGroup.option_type !== 'checkbox') {
         // For required single-select options, pre-select the first option
-        initialOptions[optionGroup.id] = optionGroup.choices[0]?.id || null;
-      } else if (optionGroup.multiSelect) {
+        initialOptions[optionGroup.id] = optionGroup.choices && optionGroup.choices[0] ? optionGroup.choices[0].id : null;
+      } else if (optionGroup.option_type === 'checkbox') {
         // For multi-select options, initialize with empty array
         initialOptions[optionGroup.id] = [];
       } else {
@@ -211,11 +211,11 @@ const Menu = () => {
     
     // Check if all required options have selections
     return item.options.every(optionGroup => {
-      if (!optionGroup.required) return true;
+      if (!optionGroup.is_required) return true;
       
       const selection = itemOptionSelections[optionGroup.id];
       
-      if (optionGroup.multiSelect) {
+      if (optionGroup.option_type === 'checkbox') {
         return selection && selection.length > 0;
       } else {
         return selection !== null && selection !== undefined;
@@ -227,10 +227,39 @@ const Menu = () => {
   const handleAddToCart = (item) => {
     if (!canAddToCart(item)) return;
     
-    // Create a copy of the item with selected options
+    // Calculate total price including option modifiers
+    let totalPrice = parseFloat(item.price) || 0;
+    const itemOptionSelections = selectedOptions[item.id] || {};
+    
+    // Add price modifiers from selected options
+    if (item.options) {
+      item.options.forEach(optionGroup => {
+        const selection = itemOptionSelections[optionGroup.id];
+        if (selection) {
+          if (optionGroup.option_type === 'checkbox' && Array.isArray(selection)) {
+            // Multiple selections
+            selection.forEach(choiceId => {
+              const choice = optionGroup.choices.find(c => c.id === choiceId);
+              if (choice && choice.price_modifier) {
+                totalPrice += parseFloat(choice.price_modifier);
+              }
+            });
+          } else {
+            // Single selection
+            const choice = optionGroup.choices.find(c => c.id === selection);
+            if (choice && choice.price_modifier) {
+              totalPrice += parseFloat(choice.price_modifier);
+            }
+          }
+        }
+      });
+    }
+    
+    // Create a copy of the item with selected options and calculated price
     const itemWithOptions = {
       ...item,
-      selectedOptions: selectedOptions[item.id] || {}
+      selectedOptions: selectedOptions[item.id] || {},
+      finalPrice: totalPrice
     };
     
     // Add to cart
@@ -240,6 +269,12 @@ const Menu = () => {
     setExpandedItems(prev => ({
       ...prev,
       [item.id]: false
+    }));
+    
+    // Clear selected options for this item
+    setSelectedOptions(prev => ({
+      ...prev,
+      [item.id]: {}
     }));
   }
 
@@ -357,32 +392,35 @@ const Menu = () => {
                           <div key={optionGroup.id} className="option-group">
                             <div className="option-group-header">
                               <h5>{optionGroup.name}</h5>
-                              <span className={`option-type ${optionGroup.required ? 'required' : 'optional'}`}>
-                                {optionGroup.required ? 'Required' : 'Optional'}
+                              <span className={`option-type ${optionGroup.is_required ? 'required' : 'optional'}`}>
+                                {optionGroup.is_required ? 'Required' : 'Optional'}
                               </span>
                             </div>
                             <p className="option-description">{optionGroup.description}</p>
                             
                             <div className="option-choices">
-                              {optionGroup.choices.map((choice) => (
+                              {optionGroup.choices && optionGroup.choices.map((choice) => (
                                 <div key={choice.id} className="option-choice">
                                   <label className="option-choice-label">
                                     <input
-                                      type={optionGroup.multiSelect ? "checkbox" : "radio"}
+                                      type={optionGroup.option_type === 'checkbox' ? "checkbox" : "radio"}
                                       name={`option-${item.id}-${optionGroup.id}`}
                                       value={choice.id}
                                       checked={
                                         selectedOptions[item.id] && 
                                         selectedOptions[item.id][optionGroup.id] && 
-                                        (optionGroup.multiSelect 
+                                        (optionGroup.option_type === 'checkbox'
                                           ? selectedOptions[item.id][optionGroup.id].includes(choice.id)
                                           : selectedOptions[item.id][optionGroup.id] === choice.id)
                                       }
-                                      onChange={() => handleOptionChange(item.id, optionGroup.id, choice.id, optionGroup.multiSelect)}
+                                      onChange={() => handleOptionChange(item.id, optionGroup.id, choice.id, optionGroup.option_type === 'checkbox')}
                                     />
                                     <span className="option-choice-name">{choice.name}</span>
-                                    {choice.price > 0 && (
-                                      <span className="option-choice-price">+${(parseFloat(choice.price) || 0).toFixed(2)}</span>
+                                    {choice.price_modifier && parseFloat(choice.price_modifier) > 0 && (
+                                      <span className="option-choice-price">+${(parseFloat(choice.price_modifier) || 0).toFixed(2)}</span>
+                                    )}
+                                    {choice.price_modifier && parseFloat(choice.price_modifier) < 0 && (
+                                      <span className="option-choice-price">-${Math.abs(parseFloat(choice.price_modifier) || 0).toFixed(2)}</span>
                                     )}
                                   </label>
                                 </div>

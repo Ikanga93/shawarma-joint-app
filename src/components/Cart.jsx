@@ -236,13 +236,13 @@ const Cart = ({ isOpen, onClose }) => {
                           const selectedChoice = optionGroup.choices.find(c => c.id === choiceId);
                           if (selectedChoice) {
                             // Add option price to surcharge
-                            optionsSurcharge += parseFloat(selectedChoice.price) || 0;
+                            optionsSurcharge += parseFloat(selectedChoice.price_modifier) || 0;
                             
                             // Add to details for display
                             selectedOptionDetails.push({
                               groupName: optionGroup.name,
                               choiceName: selectedChoice.name,
-                              price: parseFloat(selectedChoice.price) || 0
+                              price: parseFloat(selectedChoice.price_modifier) || 0
                             });
                           }
                         });

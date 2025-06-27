@@ -1089,8 +1089,38 @@ app.post('/api/upload-menu-image', upload.single('image'), (req, res) => {
 // Get all menu items
 app.get('/api/menu', async (req, res) => {
   try {
-    const rows = await queryAll('SELECT * FROM menu_items ORDER BY category, name')
-    res.json(rows)
+    const menuItems = await queryAll('SELECT * FROM menu_items ORDER BY category, name')
+    
+    // Get options for each menu item
+    const menuItemsWithOptions = await Promise.all(
+      menuItems.map(async (item) => {
+        const options = await queryAll(
+          'SELECT * FROM menu_item_options WHERE item_id = ? ORDER BY sort_order, id',
+          [item.id]
+        )
+        
+        // Get choices for each option
+        const optionsWithChoices = await Promise.all(
+          options.map(async (option) => {
+            const choices = await queryAll(
+              'SELECT * FROM menu_item_option_choices WHERE option_id = ? ORDER BY sort_order, id',
+              [option.id]
+            )
+            return {
+              ...option,
+              choices
+            }
+          })
+        )
+        
+        return {
+          ...item,
+          options: optionsWithChoices
+        }
+      })
+    )
+    
+    res.json(menuItemsWithOptions)
   } catch (error) {
     console.error('Error fetching menu items:', error)
     res.status(500).json({ error: 'Failed to fetch menu items' })
@@ -2524,4 +2554,534 @@ app.get('/api/admin/customers/:customerId/deletion-preview', authenticateToken, 
     console.error('Error generating customer deletion preview:', error)
     res.status(500).json({ error: 'Failed to generate customer deletion preview' })
   }
-}) 
+})
+
+// Menu Item Options API Routes
+
+// Get options for a specific menu item
+app.get('/api/menu/:itemId/options', async (req, res) => {
+  try {
+    const { itemId } = req.params
+    
+    // Get all options for this menu item
+    const options = await queryAll(
+      'SELECT * FROM menu_item_options WHERE item_id = ? ORDER BY sort_order, id',
+      [itemId]
+    )
+    
+    // Get choices for each option
+    const optionsWithChoices = await Promise.all(
+      options.map(async (option) => {
+        const choices = await queryAll(
+          'SELECT * FROM menu_item_option_choices WHERE option_id = ? ORDER BY sort_order, id',
+          [option.id]
+        )
+        return {
+          ...option,
+          choices
+        }
+      })
+    )
+    
+    res.json(optionsWithChoices)
+  } catch (error) {
+    console.error('Error fetching menu item options:', error)
+    res.status(500).json({ error: 'Failed to fetch menu item options' })
+  }
+})
+
+// Add option to menu item
+app.post('/api/menu/:itemId/options', authenticateToken, authorizeRole(['admin']), async (req, res) => {
+  try {
+    const { itemId } = req.params
+    const { name, description, option_type, is_required, sort_order, choices } = req.body
+
+    if (!name || !option_type) {
+      return res.status(400).json({ error: 'Name and option type are required' })
+    }
+
+    // Validate option_type
+    if (!['radio', 'checkbox', 'select'].includes(option_type)) {
+      return res.status(400).json({ error: 'Invalid option type. Must be radio, checkbox, or select' })
+    }
+
+    // Insert the option
+    const optionResult = await query(
+      'INSERT INTO menu_item_options (item_id, name, description, option_type, is_required, sort_order) VALUES (?, ?, ?, ?, ?, ?)',
+      [itemId, name, description, option_type, is_required || false, sort_order || 0]
+    )
+
+    let optionId
+    if (optionResult.lastID) {
+      // SQLite case
+      optionId = optionResult.lastID
+    } else {
+      // PostgreSQL case - get the most recently inserted option for this item
+      const createdOption = await queryOne(
+        'SELECT id FROM menu_item_options WHERE item_id = ? AND name = ? ORDER BY created_at DESC LIMIT 1',
+        [itemId, name]
+      )
+      optionId = createdOption.id
+    }
+
+    // Insert choices if provided
+    if (choices && Array.isArray(choices)) {
+      for (const choice of choices) {
+        await query(
+          'INSERT INTO menu_item_option_choices (option_id, name, price_modifier, sort_order) VALUES (?, ?, ?, ?)',
+          [optionId, choice.name, choice.price_modifier || 0, choice.sort_order || 0]
+        )
+      }
+    }
+
+    // Return the created option with choices
+    const createdOption = await queryOne('SELECT * FROM menu_item_options WHERE id = ?', [optionId])
+    const optionChoices = await queryAll('SELECT * FROM menu_item_option_choices WHERE option_id = ? ORDER BY sort_order, id', [optionId])
+    
+    res.json({
+      ...createdOption,
+      choices: optionChoices
+    })
+  } catch (error) {
+    console.error('Error adding menu item option:', error)
+    res.status(500).json({ error: 'Failed to add menu item option' })
+  }
+})
+
+// Update menu item option
+app.put('/api/menu/:itemId/options/:optionId', authenticateToken, authorizeRole(['admin']), async (req, res) => {
+  try {
+    const { optionId } = req.params
+    const { name, description, option_type, is_required, sort_order } = req.body
+    
+    await query(
+      'UPDATE menu_item_options SET name = ?, description = ?, option_type = ?, is_required = ?, sort_order = ? WHERE id = ?',
+      [name, description, option_type, is_required, sort_order, optionId]
+    )
+
+    res.json({ success: true })
+  } catch (error) {
+    console.error('Error updating menu item option:', error)
+    res.status(500).json({ error: 'Failed to update menu item option' })
+  }
+})
+
+// Delete menu item option
+app.delete('/api/menu/:itemId/options/:optionId', authenticateToken, authorizeRole(['admin']), async (req, res) => {
+  try {
+    const { optionId } = req.params
+    
+    // Delete choices first (cascade should handle this, but being explicit)
+    await query('DELETE FROM menu_item_option_choices WHERE option_id = ?', [optionId])
+    
+    // Delete the option
+    const result = await query('DELETE FROM menu_item_options WHERE id = ?', [optionId])
+    
+    if (result.changes === 0) {
+      return res.status(404).json({ error: 'Menu item option not found' })
+    }
+
+    res.json({ success: true })
+  } catch (error) {
+    console.error('Error deleting menu item option:', error)
+    res.status(500).json({ error: 'Failed to delete menu item option' })
+  }
+})
+
+// Menu Item Option Choices API Routes
+
+// Add choice to option
+app.post('/api/menu/:itemId/options/:optionId/choices', authenticateToken, authorizeRole(['admin']), async (req, res) => {
+  try {
+    const { optionId } = req.params
+    const { name, price_modifier, sort_order } = req.body
+
+    if (!name) {
+      return res.status(400).json({ error: 'Choice name is required' })
+    }
+
+    const result = await query(
+      'INSERT INTO menu_item_option_choices (option_id, name, price_modifier, sort_order) VALUES (?, ?, ?, ?)',
+      [optionId, name, price_modifier || 0, sort_order || 0]
+    )
+
+    // Return the created choice
+    let createdChoice
+    if (result.lastID) {
+      // SQLite case
+      createdChoice = await queryOne('SELECT * FROM menu_item_option_choices WHERE id = ?', [result.lastID])
+    } else {
+      // PostgreSQL case
+      createdChoice = await queryOne(
+        'SELECT * FROM menu_item_option_choices WHERE option_id = ? AND name = ? ORDER BY created_at DESC LIMIT 1',
+        [optionId, name]
+      )
+    }
+    
+    res.json(createdChoice)
+  } catch (error) {
+    console.error('Error adding menu item option choice:', error)
+    res.status(500).json({ error: 'Failed to add menu item option choice' })
+  }
+})
+
+// Update choice
+app.put('/api/menu/:itemId/options/:optionId/choices/:choiceId', authenticateToken, authorizeRole(['admin']), async (req, res) => {
+  try {
+    const { choiceId } = req.params
+    const { name, price_modifier, sort_order } = req.body
+    
+    await query(
+      'UPDATE menu_item_option_choices SET name = ?, price_modifier = ?, sort_order = ? WHERE id = ?',
+      [name, price_modifier, sort_order, choiceId]
+    )
+
+    res.json({ success: true })
+  } catch (error) {
+    console.error('Error updating menu item option choice:', error)
+    res.status(500).json({ error: 'Failed to update menu item option choice' })
+  }
+})
+
+// Delete choice
+app.delete('/api/menu/:itemId/options/:optionId/choices/:choiceId', authenticateToken, authorizeRole(['admin']), async (req, res) => {
+  try {
+    const { choiceId } = req.params
+    
+    const result = await query('DELETE FROM menu_item_option_choices WHERE id = ?', [choiceId])
+    
+    if (result.changes === 0) {
+      return res.status(404).json({ error: 'Menu item option choice not found' })
+    }
+
+    res.json({ success: true })
+  } catch (error) {
+    console.error('Error deleting menu item option choice:', error)
+    res.status(500).json({ error: 'Failed to delete menu item option choice' })
+  }
+})
+
+// Enhanced menu endpoint that includes options
+app.get('/api/menu/with-options', async (req, res) => {
+  try {
+    const menuItems = await queryAll('SELECT * FROM menu_items WHERE available = ? ORDER BY category, name', [true])
+    
+    // Get options for each menu item
+    const menuItemsWithOptions = await Promise.all(
+      menuItems.map(async (item) => {
+        const options = await queryAll(
+          'SELECT * FROM menu_item_options WHERE item_id = ? ORDER BY sort_order, id',
+          [item.id]
+        )
+        
+        // Get choices for each option
+        const optionsWithChoices = await Promise.all(
+          options.map(async (option) => {
+            const choices = await queryAll(
+              'SELECT * FROM menu_item_option_choices WHERE option_id = ? ORDER BY sort_order, id',
+              [option.id]
+            )
+            return {
+              ...option,
+              choices
+            }
+          })
+        )
+        
+        return {
+          ...item,
+          options: optionsWithChoices
+        }
+      })
+    )
+    
+    res.json(menuItemsWithOptions)
+  } catch (error) {
+    console.error('Error fetching menu items with options:', error)
+    res.status(500).json({ error: 'Failed to fetch menu items with options' })
+  }
+})
+
+// === OPTION TEMPLATES API ===
+
+// Get all option templates
+app.get('/api/option-templates', async (req, res) => {
+  try {
+    const templates = await queryAll('SELECT * FROM option_templates ORDER BY sort_order, name')
+    
+    // Get choices for each template
+    const templatesWithChoices = await Promise.all(
+      templates.map(async (template) => {
+        const choices = await queryAll(
+          'SELECT * FROM option_template_choices WHERE template_id = ? ORDER BY sort_order, id',
+          [template.id]
+        )
+        return {
+          ...template,
+          choices
+        }
+      })
+    )
+    
+    res.json(templatesWithChoices)
+  } catch (error) {
+    console.error('Error fetching option templates:', error)
+    res.status(500).json({ error: 'Failed to fetch option templates' })
+  }
+})
+
+// Create a new option template
+app.post('/api/option-templates', authenticateToken, authorizeRole(['admin']), async (req, res) => {
+  try {
+    const { name, description, option_type, is_required, sort_order, choices } = req.body
+
+    if (!name || !option_type) {
+      return res.status(400).json({ error: 'Name and option type are required' })
+    }
+
+    // Validate option_type
+    if (!['radio', 'checkbox', 'select'].includes(option_type)) {
+      return res.status(400).json({ error: 'Invalid option type. Must be radio, checkbox, or select' })
+    }
+
+    // Insert the template
+    const templateResult = await query(
+      'INSERT INTO option_templates (name, description, option_type, is_required, sort_order) VALUES (?, ?, ?, ?, ?)',
+      [name, description, option_type, is_required || false, sort_order || 0]
+    )
+
+    let templateId
+    if (templateResult.lastID) {
+      // SQLite case
+      templateId = templateResult.lastID
+    } else {
+      // PostgreSQL case - get the most recently inserted template
+      const createdTemplate = await queryOne(
+        'SELECT id FROM option_templates WHERE name = ? ORDER BY created_at DESC LIMIT 1',
+        [name]
+      )
+      templateId = createdTemplate.id
+    }
+
+    // Insert choices if provided
+    if (choices && Array.isArray(choices)) {
+      for (const choice of choices) {
+        await query(
+          'INSERT INTO option_template_choices (template_id, name, price_modifier, sort_order) VALUES (?, ?, ?, ?)',
+          [templateId, choice.name, choice.price_modifier || 0, choice.sort_order || 0]
+        )
+      }
+    }
+
+    // Return the created template with choices
+    const createdTemplate = await queryOne('SELECT * FROM option_templates WHERE id = ?', [templateId])
+    const templateChoices = await queryAll('SELECT * FROM option_template_choices WHERE template_id = ? ORDER BY sort_order, id', [templateId])
+    
+    res.json({
+      ...createdTemplate,
+      choices: templateChoices
+    })
+  } catch (error) {
+    console.error('Error creating option template:', error)
+    res.status(500).json({ error: 'Failed to create option template' })
+  }
+})
+
+// Update an option template
+app.put('/api/option-templates/:templateId', authenticateToken, authorizeRole(['admin']), async (req, res) => {
+  try {
+    const { templateId } = req.params
+    const { name, description, option_type, is_required, sort_order } = req.body
+    
+    await query(
+      'UPDATE option_templates SET name = ?, description = ?, option_type = ?, is_required = ?, sort_order = ? WHERE id = ?',
+      [name, description, option_type, is_required, sort_order, templateId]
+    )
+
+    res.json({ success: true })
+  } catch (error) {
+    console.error('Error updating option template:', error)
+    res.status(500).json({ error: 'Failed to update option template' })
+  }
+})
+
+// Delete an option template
+app.delete('/api/option-templates/:templateId', authenticateToken, authorizeRole(['admin']), async (req, res) => {
+  try {
+    const { templateId } = req.params
+    
+    // Delete choices first (cascade should handle this, but being explicit)
+    await query('DELETE FROM option_template_choices WHERE template_id = ?', [templateId])
+    
+    // Delete template assignments from menu items
+    await query('DELETE FROM menu_item_option_templates WHERE template_id = ?', [templateId])
+    
+    // Delete the template
+    const result = await query('DELETE FROM option_templates WHERE id = ?', [templateId])
+    
+    if (result.changes === 0) {
+      return res.status(404).json({ error: 'Option template not found' })
+    }
+
+    res.json({ success: true })
+  } catch (error) {
+    console.error('Error deleting option template:', error)
+    res.status(500).json({ error: 'Failed to delete option template' })
+  }
+})
+
+// === MENU ITEM TEMPLATE ASSIGNMENT API ===
+
+// Get templates assigned to a menu item
+app.get('/api/menu/:itemId/templates', async (req, res) => {
+  try {
+    const { itemId } = req.params
+    
+    // Get assigned templates with choices
+    const assignedTemplates = await queryAll(`
+      SELECT t.*, mt.sort_order as assignment_sort_order
+      FROM option_templates t
+      JOIN menu_item_option_templates mt ON t.id = mt.template_id
+      WHERE mt.item_id = ?
+      ORDER BY mt.sort_order, t.sort_order, t.name
+    `, [itemId])
+    
+    // Get choices for each template
+    const templatesWithChoices = await Promise.all(
+      assignedTemplates.map(async (template) => {
+        const choices = await queryAll(
+          'SELECT * FROM option_template_choices WHERE template_id = ? ORDER BY sort_order, id',
+          [template.id]
+        )
+        return {
+          ...template,
+          choices
+        }
+      })
+    )
+    
+    res.json(templatesWithChoices)
+  } catch (error) {
+    console.error('Error fetching menu item templates:', error)
+    res.status(500).json({ error: 'Failed to fetch menu item templates' })
+  }
+})
+
+// Assign templates to a menu item
+app.post('/api/menu/:itemId/templates', authenticateToken, authorizeRole(['admin']), async (req, res) => {
+  try {
+    const { itemId } = req.params
+    const { templateIds } = req.body // Array of template IDs
+
+    if (!Array.isArray(templateIds)) {
+      return res.status(400).json({ error: 'templateIds must be an array' })
+    }
+
+    // Clear existing template assignments
+    await query('DELETE FROM menu_item_option_templates WHERE item_id = ?', [itemId])
+
+    // Assign new templates
+    for (let i = 0; i < templateIds.length; i++) {
+      await query(
+        'INSERT INTO menu_item_option_templates (item_id, template_id, sort_order) VALUES (?, ?, ?)',
+        [itemId, templateIds[i], i]
+      )
+    }
+
+    res.json({ success: true, assigned: templateIds.length })
+  } catch (error) {
+    console.error('Error assigning templates to menu item:', error)
+    res.status(500).json({ error: 'Failed to assign templates to menu item' })
+  }
+})
+
+// Remove a specific template from a menu item
+app.delete('/api/menu/:itemId/templates/:templateId', authenticateToken, authorizeRole(['admin']), async (req, res) => {
+  try {
+    const { itemId, templateId } = req.params
+    
+    const result = await query('DELETE FROM menu_item_option_templates WHERE item_id = ? AND template_id = ?', [itemId, templateId])
+    
+    if (result.changes === 0) {
+      return res.status(404).json({ error: 'Template assignment not found' })
+    }
+
+    res.json({ success: true })
+  } catch (error) {
+    console.error('Error removing template from menu item:', error)
+    res.status(500).json({ error: 'Failed to remove template from menu item' })
+  }
+})
+
+// Get enhanced menu with options from both direct options and templates
+app.get('/api/menu', async (req, res) => {
+  try {
+    const menuItems = await queryAll('SELECT * FROM menu_items ORDER BY category, name')
+    
+    // Get options for each menu item (both direct options and template-based options)
+    const menuItemsWithOptions = await Promise.all(
+      menuItems.map(async (item) => {
+        // Get direct options
+        const directOptions = await queryAll(
+          'SELECT * FROM menu_item_options WHERE item_id = ? ORDER BY sort_order, id',
+          [item.id]
+        )
+        
+        // Get direct option choices
+        const directOptionsWithChoices = await Promise.all(
+          directOptions.map(async (option) => {
+            const choices = await queryAll(
+              'SELECT * FROM menu_item_option_choices WHERE option_id = ? ORDER BY sort_order, id',
+              [option.id]
+            )
+            return {
+              ...option,
+              choices,
+              source: 'direct'
+            }
+          })
+        )
+
+        // Get template-based options
+        const templateOptions = await queryAll(`
+          SELECT t.*, mt.sort_order as assignment_sort_order
+          FROM option_templates t
+          JOIN menu_item_option_templates mt ON t.id = mt.template_id
+          WHERE mt.item_id = ?
+          ORDER BY mt.sort_order, t.sort_order, t.name
+        `, [item.id])
+        
+        // Get template option choices
+        const templateOptionsWithChoices = await Promise.all(
+          templateOptions.map(async (template) => {
+            const choices = await queryAll(
+              'SELECT * FROM option_template_choices WHERE template_id = ? ORDER BY sort_order, id',
+              [template.id]
+            )
+            return {
+              ...template,
+              choices,
+              source: 'template',
+              template_id: template.id
+            }
+          })
+        )
+        
+        // Combine both direct and template options
+        const allOptions = [...directOptionsWithChoices, ...templateOptionsWithChoices]
+        
+        return {
+          ...item,
+          options: allOptions
+        }
+      })
+    )
+    
+    res.json(menuItemsWithOptions)
+  } catch (error) {
+    console.error('Error fetching menu items:', error)
+    res.status(500).json({ error: 'Failed to fetch menu items' })
+  }
+})
+
+// Locations API Routes

@@ -119,6 +119,53 @@ class ApiService {
     }
   }
 
+  // Generic HTTP methods for dynamic API calls
+  static async get(endpoint, options = {}) {
+    const url = endpoint.startsWith('http') ? endpoint : `${this.BASE_URL}${endpoint}`
+    const response = await this.makeAuthenticatedRequest(url, {
+      method: 'GET',
+      headers: this.getAuthHeaders(),
+      ...options
+    })
+    if (!response.ok) throw new Error(`GET ${endpoint} failed: ${response.status}`)
+    return this.parseResponse(response)
+  }
+
+  static async post(endpoint, data = null, options = {}) {
+    const url = endpoint.startsWith('http') ? endpoint : `${this.BASE_URL}${endpoint}`
+    const response = await this.makeAuthenticatedRequest(url, {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+      body: data ? JSON.stringify(data) : null,
+      ...options
+    })
+    if (!response.ok) throw new Error(`POST ${endpoint} failed: ${response.status}`)
+    return this.parseResponse(response)
+  }
+
+  static async put(endpoint, data = null, options = {}) {
+    const url = endpoint.startsWith('http') ? endpoint : `${this.BASE_URL}${endpoint}`
+    const response = await this.makeAuthenticatedRequest(url, {
+      method: 'PUT',
+      headers: this.getAuthHeaders(),
+      body: data ? JSON.stringify(data) : null,
+      ...options
+    })
+    if (!response.ok) throw new Error(`PUT ${endpoint} failed: ${response.status}`)
+    return this.parseResponse(response)
+  }
+
+  static async delete(endpoint, options = {}) {
+    const url = endpoint.startsWith('http') ? endpoint : `${this.BASE_URL}${endpoint}`
+    const response = await this.makeAuthenticatedRequest(url, {
+      method: 'DELETE',
+      headers: this.getAuthHeaders(),
+      ...options
+    })
+    if (!response.ok) throw new Error(`DELETE ${endpoint} failed: ${response.status}`)
+    return this.parseResponse(response)
+  }
+
   // Orders
   static async getOrders() {
     const response = await this.makeAuthenticatedRequest(`${this.BASE_URL}/orders`, {
@@ -478,6 +525,46 @@ class ApiService {
       throw new Error('Failed to fetch customers')
     }
     return this.parseResponse(response)
+  }
+
+  // === OPTION TEMPLATES API ===
+
+  // Get all option templates
+  static async getOptionTemplates() {
+    const response = await this.get('/option-templates')
+    return response
+  }
+
+  // Create a new option template
+  static async createOptionTemplate(templateData) {
+    return this.post('/option-templates', templateData)
+  }
+
+  // Update an option template
+  static async updateOptionTemplate(templateId, templateData) {
+    return this.put(`/option-templates/${templateId}`, templateData)
+  }
+
+  // Delete an option template
+  static async deleteOptionTemplate(templateId) {
+    return this.delete(`/option-templates/${templateId}`)
+  }
+
+  // === MENU ITEM TEMPLATES API ===
+
+  // Get templates assigned to a menu item
+  static async getMenuItemTemplates(itemId) {
+    return this.get(`/menu/${itemId}/templates`)
+  }
+
+  // Assign templates to a menu item
+  static async assignTemplatesToMenuItem(itemId, templateIds) {
+    return this.post(`/menu/${itemId}/templates`, { templateIds })
+  }
+
+  // Remove a specific template from a menu item
+  static async removeTemplateFromMenuItem(itemId, templateId) {
+    return this.delete(`/menu/${itemId}/templates/${templateId}`)
   }
 
   // Order Management Methods

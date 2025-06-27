@@ -150,29 +150,37 @@ const HomePage = () => {
                 <h3>Made with Love</h3>
                 <p>Every dish is prepared with passion and care, bringing you the true taste of Mediterranean with every meal.</p>
               </div>
-
-              <div className="feature-item">
-                <div className="feature-icon">🚚</div>
-                <h3>Mobile & Convenient</h3>
-                <p>Find us around town with our food truck, bringing authentic Mediterranean flavors directly to your neighborhood.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+      
+      {/* Featured Testimonial Section */}
+      <section className="featured-testimonial">
+        <div className="container">
+          <div className="testimonials-slider">
+            <div className="testimonials-track">
+              <div className="testimonial-card">
+                <div className="testimonial-image">
+                  <img src="/uploads/steak-shawar-bowl-image.jpg" alt="Delicious Beef Shawarma Sandwich" />
+                </div>
+                <div className="testimonial-content">
+                  <p>
+                    "Lunchtime delight! Just devoured a divine beef shawarma sandwich! 🥙🤤<br/>
+                    Overflowing with succulent beef, crisp veggies, and a heavenly tahini drizzle. Taste buds, meet paradise! 😍"
+                  </p>
+                </div>
               </div>
-              
-              <div className="feature-item">
-                <div className="feature-icon">⚡</div>
-                <h3>Fast Service</h3>
-                <p>Quick preparation without compromising quality. Perfect for your lunch break or quick dinner solution.</p>
-              </div>
 
-              <div className="feature-item">
-                <div className="feature-icon">🌟</div>
-                <h3>Customer Satisfaction</h3>
-                <p>Over 98% customer satisfaction rate with hundreds of five-star reviews from our loyal customers.</p>
-              </div>
-
-              <div className="feature-item">
-                <div className="feature-icon">💰</div>
-                <h3>Great Value</h3>
-                <p>Generous portions at affordable prices. Student discounts available - great food that fits your budget!</p>
+              <div className="testimonial-card">
+                <div className="testimonial-image">
+                  <img src="/uploads/falafel-bowl-image.jpg" alt="Fresh Falafel Bowl" />
+                </div>
+                <div className="testimonial-content">
+                  <p>
+                    "Dive into our Falafel Bowl! Nestled on a bed of rice, choose between creamy hummus or crisp lettuce, add your favorite five toppings, and drizzle with your choice of sauce. Customize your meal for the ultimate flavor experience! 🥙✨"
+                  </p>
+                </div>
               </div>
             </div>
           </div>

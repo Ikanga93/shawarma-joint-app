@@ -222,7 +222,11 @@ export const CartProvider = ({ children }) => {
   }
 
   const getCartTotal = () => {
-    return cartItems.reduce((total, item) => total + (item.price * item.quantity), 0)
+    return cartItems.reduce((total, item) => {
+      // Use finalPrice if available (includes option modifiers), otherwise use base price
+      const itemPrice = item.finalPrice || parseFloat(item.price) || 0;
+      return total + (itemPrice * item.quantity);
+    }, 0)
   }
 
   const getCartItemCount = () => {

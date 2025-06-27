@@ -182,6 +182,9 @@ export const initializeDatabase = async () => {
     // Create default admin user
     await createDefaultAdminUser()
     
+    // Create default option templates
+    await createDefaultOptionTemplates()
+    
     console.log('✅ Database tables initialized successfully')
   } catch (error) {
     console.error('❌ Error initializing database:', error)
@@ -317,6 +320,64 @@ const initializeSQLiteTables = () => {
         available BOOLEAN DEFAULT 1,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )`)
+
+      // Menu item options table (for customizations like size, toppings, etc.)
+      db.run(`CREATE TABLE IF NOT EXISTS menu_item_options (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        item_id INTEGER NOT NULL,
+        name TEXT NOT NULL,
+        description TEXT,
+        option_type TEXT NOT NULL CHECK(option_type IN ('radio', 'checkbox', 'select')),
+        is_required BOOLEAN DEFAULT 0,
+        sort_order INTEGER DEFAULT 0,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (item_id) REFERENCES menu_items (id) ON DELETE CASCADE
+      )`)
+
+      // Menu item option choices table (individual choices for each option)
+      db.run(`CREATE TABLE IF NOT EXISTS menu_item_option_choices (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        option_id INTEGER NOT NULL,
+        name TEXT NOT NULL,
+        price_modifier REAL DEFAULT 0,
+        sort_order INTEGER DEFAULT 0,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (option_id) REFERENCES menu_item_options (id) ON DELETE CASCADE
+      )`)
+
+      // Option templates table (reusable option templates)
+      db.run(`CREATE TABLE IF NOT EXISTS option_templates (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        description TEXT,
+        option_type TEXT NOT NULL CHECK(option_type IN ('radio', 'checkbox', 'select')),
+        is_required BOOLEAN DEFAULT 0,
+        sort_order INTEGER DEFAULT 0,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )`)
+
+      // Option template choices table (choices for each template)
+      db.run(`CREATE TABLE IF NOT EXISTS option_template_choices (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        template_id INTEGER NOT NULL,
+        name TEXT NOT NULL,
+        price_modifier REAL DEFAULT 0,
+        sort_order INTEGER DEFAULT 0,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (template_id) REFERENCES option_templates (id) ON DELETE CASCADE
+      )`)
+
+      // Menu item option templates junction table (assigns templates to menu items)
+      db.run(`CREATE TABLE IF NOT EXISTS menu_item_option_templates (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        item_id INTEGER NOT NULL,
+        template_id INTEGER NOT NULL,
+        sort_order INTEGER DEFAULT 0,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(item_id, template_id),
+        FOREIGN KEY (item_id) REFERENCES menu_items (id) ON DELETE CASCADE,
+        FOREIGN KEY (template_id) REFERENCES option_templates (id) ON DELETE CASCADE
       )`)
 
       // Orders table
@@ -464,6 +525,64 @@ const initializePostgreSQLTables = async () => {
     available BOOLEAN DEFAULT true,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  )`)
+
+  // Menu item options table (for customizations like size, toppings, etc.)
+  await query(`CREATE TABLE IF NOT EXISTS menu_item_options (
+    id SERIAL PRIMARY KEY,
+    item_id INTEGER NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    option_type VARCHAR(50) NOT NULL CHECK(option_type IN ('radio', 'checkbox', 'select')),
+    is_required BOOLEAN DEFAULT false,
+    sort_order INTEGER DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (item_id) REFERENCES menu_items (id) ON DELETE CASCADE
+  )`)
+
+  // Menu item option choices table (individual choices for each option)
+  await query(`CREATE TABLE IF NOT EXISTS menu_item_option_choices (
+    id SERIAL PRIMARY KEY,
+    option_id INTEGER NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    price_modifier DECIMAL(10,2) DEFAULT 0,
+    sort_order INTEGER DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (option_id) REFERENCES menu_item_options (id) ON DELETE CASCADE
+  )`)
+
+  // Option templates table (reusable option templates)
+  await query(`CREATE TABLE IF NOT EXISTS option_templates (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    option_type VARCHAR(50) NOT NULL CHECK(option_type IN ('radio', 'checkbox', 'select')),
+    is_required BOOLEAN DEFAULT false,
+    sort_order INTEGER DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  )`)
+
+  // Option template choices table (choices for each template)
+  await query(`CREATE TABLE IF NOT EXISTS option_template_choices (
+    id SERIAL PRIMARY KEY,
+    template_id INTEGER NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    price_modifier DECIMAL(10,2) DEFAULT 0,
+    sort_order INTEGER DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (template_id) REFERENCES option_templates (id) ON DELETE CASCADE
+  )`)
+
+  // Menu item option templates junction table (assigns templates to menu items)
+  await query(`CREATE TABLE IF NOT EXISTS menu_item_option_templates (
+    id SERIAL PRIMARY KEY,
+    item_id INTEGER NOT NULL,
+    template_id INTEGER NOT NULL,
+    sort_order INTEGER DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(item_id, template_id),
+    FOREIGN KEY (item_id) REFERENCES menu_items (id) ON DELETE CASCADE,
+    FOREIGN KEY (template_id) REFERENCES option_templates (id) ON DELETE CASCADE
   )`)
 
   // Orders table
@@ -621,6 +740,160 @@ const createDefaultAdminUser = async () => {
     
   } catch (error) {
     console.error('❌ Error creating default admin user:', error)
+    // Don't throw error to prevent app startup failure
+  }
+}
+
+// Helper function to create default option templates
+const createDefaultOptionTemplates = async () => {
+  try {
+    // Check if templates already exist
+    const existingTemplates = await queryAll('SELECT * FROM option_templates LIMIT 1')
+    
+    if (existingTemplates.length > 0) {
+      console.log('✅ Default option templates already exist')
+      return
+    }
+    
+    console.log('🔧 Creating default option templates...')
+    
+    // Define default option templates
+    const defaultTemplates = [
+      {
+        name: 'Size',
+        description: 'Choose your portion size',
+        option_type: 'radio',
+        is_required: true,
+        sort_order: 1,
+        choices: [
+          { name: 'Small', price_modifier: 0, sort_order: 1 },
+          { name: 'Medium', price_modifier: 2.00, sort_order: 2 },
+          { name: 'Large', price_modifier: 4.00, sort_order: 3 }
+        ]
+      },
+      {
+        name: 'Protein',
+        description: 'Choose your protein',
+        option_type: 'radio',
+        is_required: true,
+        sort_order: 2,
+        choices: [
+          { name: 'Chicken', price_modifier: 0, sort_order: 1 },
+          { name: 'Beef', price_modifier: 1.50, sort_order: 2 },
+          { name: 'Lamb', price_modifier: 2.50, sort_order: 3 },
+          { name: 'Mixed (Chicken & Beef)', price_modifier: 1.00, sort_order: 4 },
+          { name: 'Falafel (Vegetarian)', price_modifier: -0.50, sort_order: 5 }
+        ]
+      },
+      {
+        name: 'Spice Level',
+        description: 'How spicy would you like it?',
+        option_type: 'radio',
+        is_required: false,
+        sort_order: 3,
+        choices: [
+          { name: 'Mild', price_modifier: 0, sort_order: 1 },
+          { name: 'Medium', price_modifier: 0, sort_order: 2 },
+          { name: 'Hot', price_modifier: 0, sort_order: 3 },
+          { name: 'Extra Hot', price_modifier: 0, sort_order: 4 }
+        ]
+      },
+      {
+        name: 'Toppings',
+        description: 'Add your favorite toppings',
+        option_type: 'checkbox',
+        is_required: false,
+        sort_order: 4,
+        choices: [
+          { name: 'Extra Pickles', price_modifier: 0.50, sort_order: 1 },
+          { name: 'Extra Tomatoes', price_modifier: 0.50, sort_order: 2 },
+          { name: 'Extra Onions', price_modifier: 0.50, sort_order: 3 },
+          { name: 'Extra Cucumbers', price_modifier: 0.50, sort_order: 4 },
+          { name: 'Extra Lettuce', price_modifier: 0.50, sort_order: 5 },
+          { name: 'Jalapeños', price_modifier: 0.75, sort_order: 6 },
+          { name: 'Hummus', price_modifier: 1.00, sort_order: 7 },
+          { name: 'Tabouleh', price_modifier: 1.25, sort_order: 8 }
+        ]
+      },
+      {
+        name: 'Sauce',
+        description: 'Choose your sauce',
+        option_type: 'checkbox',
+        is_required: false,
+        sort_order: 5,
+        choices: [
+          { name: 'Garlic Sauce', price_modifier: 0, sort_order: 1 },
+          { name: 'Tahini Sauce', price_modifier: 0, sort_order: 2 },
+          { name: 'Hot Sauce', price_modifier: 0, sort_order: 3 },
+          { name: 'Yogurt Sauce', price_modifier: 0, sort_order: 4 },
+          { name: 'Amba (Pickled Mango)', price_modifier: 0.50, sort_order: 5 },
+          { name: 'Schug (Green Hot Sauce)', price_modifier: 0.50, sort_order: 6 }
+        ]
+      },
+      {
+        name: 'Bread Type',
+        description: 'Choose your bread',
+        option_type: 'radio',
+        is_required: false,
+        sort_order: 6,
+        choices: [
+          { name: 'Pita Bread', price_modifier: 0, sort_order: 1 },
+          { name: 'Laffa Bread', price_modifier: 0.50, sort_order: 2 },
+          { name: 'Whole Wheat Pita', price_modifier: 0.25, sort_order: 3 }
+        ]
+      },
+      {
+        name: 'Drink Size',
+        description: 'Choose your drink size',
+        option_type: 'radio',
+        is_required: false,
+        sort_order: 7,
+        choices: [
+          { name: 'Small (12oz)', price_modifier: 0, sort_order: 1 },
+          { name: 'Medium (16oz)', price_modifier: 0.50, sort_order: 2 },
+          { name: 'Large (20oz)', price_modifier: 1.00, sort_order: 3 }
+        ]
+      }
+    ]
+    
+    // Create each template
+    for (const template of defaultTemplates) {
+      // Insert the template
+      const templateResult = await query(
+        'INSERT INTO option_templates (name, description, option_type, is_required, sort_order) VALUES (?, ?, ?, ?, ?)',
+        [template.name, template.description, template.option_type, template.is_required, template.sort_order]
+      )
+
+      let templateId
+      if (templateResult.lastID) {
+        // SQLite case
+        templateId = templateResult.lastID
+      } else {
+        // PostgreSQL case - get the most recently inserted template
+        const createdTemplate = await queryOne(
+          'SELECT id FROM option_templates WHERE name = ? ORDER BY created_at DESC LIMIT 1',
+          [template.name]
+        )
+        templateId = createdTemplate.id
+      }
+
+      // Insert choices for the template
+      for (const choice of template.choices) {
+        await query(
+          'INSERT INTO option_template_choices (template_id, name, price_modifier, sort_order) VALUES (?, ?, ?, ?)',
+          [templateId, choice.name, choice.price_modifier, choice.sort_order]
+        )
+      }
+    }
+    
+    console.log('✅ Default option templates created successfully')
+    console.log(`   Created ${defaultTemplates.length} option templates:`)
+    defaultTemplates.forEach(template => {
+      console.log(`   - ${template.name} (${template.choices.length} choices)`)
+    })
+    
+  } catch (error) {
+    console.error('❌ Error creating default option templates:', error)
     // Don't throw error to prevent app startup failure
   }
 }

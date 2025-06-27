@@ -191,6 +191,37 @@ const DashboardPage = ({ onLogout }) => {
   const [isGettingLocation, setIsGettingLocation] = useState(false)
   const [locationError, setLocationError] = useState('')
 
+  // Menu Options Management state
+  const [showOptionsModal, setShowOptionsModal] = useState(false)
+  const [selectedMenuItem, setSelectedMenuItem] = useState(null)
+  const [menuItemOptions, setMenuItemOptions] = useState([])
+  const [isLoadingOptions, setIsLoadingOptions] = useState(false)
+  const [showAddOptionModal, setShowAddOptionModal] = useState(false)
+  const [editingOption, setEditingOption] = useState(null)
+  const [optionForm, setOptionForm] = useState({
+    name: '',
+    description: '',
+    option_type: 'radio',
+    is_required: false,
+    sort_order: 0,
+    choices: []
+  })
+
+  // State for option templates
+  const [optionTemplates, setOptionTemplates] = useState([])
+  const [showTemplatesModal, setShowTemplatesModal] = useState(false)
+  const [selectedTemplates, setSelectedTemplates] = useState([])
+  const [showCreateTemplateModal, setShowCreateTemplateModal] = useState(false)
+  const [editingTemplate, setEditingTemplate] = useState(null)
+  const [templateForm, setTemplateForm] = useState({
+    name: '',
+    description: '',
+    option_type: 'radio',
+    is_required: false,
+    sort_order: 0,
+    choices: []
+  })
+
   // Initialize Socket.IO and load data
   useEffect(() => {
     const initializeDashboard = async () => {
@@ -342,6 +373,15 @@ const DashboardPage = ({ onLogout }) => {
     }
   }, [])
 
+  // Load data on component mount
+  useEffect(() => {
+    loadOrders()
+    loadMenuItems()
+    loadCustomers()
+    loadLiveLocations()
+    loadOptionTemplates()
+  }, [])
+
   // Location change handler
   const handleLocationChange = (newLocation) => {
     setCurrentLocation(newLocation)
@@ -441,6 +481,15 @@ const DashboardPage = ({ onLogout }) => {
       setLiveLocations([])
     } finally {
       setIsLoadingLiveLocations(false)
+    }
+  }
+
+  const loadOptionTemplates = async () => {
+    try {
+      const templates = await ApiService.getOptionTemplates()
+      setOptionTemplates(templates)
+    } catch (error) {
+      console.error('Error loading option templates:', error)
     }
   }
 
@@ -1672,6 +1721,22 @@ const DashboardPage = ({ onLogout }) => {
                 >
                   {item.available ? <Eye size={14} /> : <EyeOff size={14} />}
                   {item.available ? 'Available' : 'Unavailable'}
+                </button>
+                <button 
+                  className="btn-templates" 
+                  onClick={() => openTemplatesModal(item)}
+                  title="Manage Option Templates"
+                >
+                  <Settings size={14} />
+                  Templates ({item.options?.filter(opt => opt.source === 'template').length || 0})
+                </button>
+                <button 
+                  className="btn-options" 
+                  onClick={() => openOptionsModal(item)}
+                  title="Manage Custom Options"
+                >
+                  <Settings size={14} />
+                  Custom ({item.options?.filter(opt => opt.source === 'direct').length || 0})
                 </button>
                 <button className="btn-edit" onClick={() => openEditMenuModal(item)}>
                   <Edit3 size={14} />
@@ -3241,6 +3306,300 @@ const DashboardPage = ({ onLogout }) => {
     )
   }
 
+  // Menu Options Management Functions
+  const openOptionsModal = async (menuItem) => {
+    setSelectedMenuItem(menuItem)
+    setShowOptionsModal(true)
+    await loadMenuItemOptions(menuItem.id)
+  }
+
+  const closeOptionsModal = () => {
+    setShowOptionsModal(false)
+    setSelectedMenuItem(null)
+    setMenuItemOptions([])
+    setEditingOption(null)
+    setShowAddOptionModal(false)
+    resetOptionForm()
+  }
+
+  const loadMenuItemOptions = async (itemId) => {
+    try {
+      setIsLoadingOptions(true)
+      const response = await ApiService.get(`/menu/${itemId}/options`)
+      setMenuItemOptions(response || [])
+    } catch (error) {
+      console.error('Error loading menu item options:', error)
+    } finally {
+      setIsLoadingOptions(false)
+    }
+  }
+
+  const openAddOptionModal = () => {
+    setShowAddOptionModal(true)
+    resetOptionForm()
+  }
+
+  const openEditOptionModal = (option) => {
+    setEditingOption(option)
+    setOptionForm({
+      name: option.name,
+      description: option.description || '',
+      option_type: option.option_type,
+      is_required: option.is_required,
+      sort_order: option.sort_order,
+      choices: option.choices || []
+    })
+    setShowAddOptionModal(true)
+  }
+
+  const closeAddOptionModal = () => {
+    setShowAddOptionModal(false)
+    setEditingOption(null)
+    resetOptionForm()
+  }
+
+  const resetOptionForm = () => {
+    setOptionForm({
+      name: '',
+      description: '',
+      option_type: 'radio',
+      is_required: false,
+      sort_order: 0,
+      choices: []
+    })
+  }
+
+  const handleOptionFormChange = (e) => {
+    const { name, value, type, checked } = e.target
+    setOptionForm(prev => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value
+    }))
+  }
+
+  const addChoice = () => {
+    setOptionForm(prev => ({
+      ...prev,
+      choices: [...prev.choices, { name: '', price_modifier: 0, sort_order: prev.choices.length }]
+    }))
+  }
+
+  const updateChoice = (index, field, value) => {
+    setOptionForm(prev => ({
+      ...prev,
+      choices: prev.choices.map((choice, i) => 
+        i === index ? { ...choice, [field]: value } : choice
+      )
+    }))
+  }
+
+  const removeChoice = (index) => {
+    setOptionForm(prev => ({
+      ...prev,
+      choices: prev.choices.filter((_, i) => i !== index)
+    }))
+  }
+
+  const handleOptionSubmit = async (e) => {
+    e.preventDefault()
+    
+    if (!selectedMenuItem) return
+
+    try {
+      const optionData = {
+        ...optionForm,
+        choices: optionForm.choices.filter(choice => choice.name.trim() !== '')
+      }
+
+      if (editingOption) {
+        // Update existing option
+        await ApiService.put(`/menu/${selectedMenuItem.id}/options/${editingOption.id}`, optionData)
+      } else {
+        // Add new option
+        await ApiService.post(`/menu/${selectedMenuItem.id}/options`, optionData)
+      }
+
+      // Reload options and menu items
+      await loadMenuItemOptions(selectedMenuItem.id)
+      await loadMenuItems()
+      closeAddOptionModal()
+    } catch (error) {
+      console.error('Error saving option:', error)
+      alert('Failed to save option. Please try again.')
+    }
+  }
+
+  const handleDeleteOption = async (optionId) => {
+    if (window.confirm('Are you sure you want to delete this option? This will remove it from all orders.')) {
+      try {
+        const menuItemId = selectedMenuItem.id
+        await ApiService.delete(`/menu/${menuItemId}/options/${optionId}`)
+        await loadMenuItemOptions(menuItemId)
+        alert('Option deleted successfully!')
+      } catch (error) {
+        console.error('Error deleting option:', error)
+        alert('Failed to delete option. Please try again.')
+      }
+    }
+  }
+
+  // Location Management Functions
+
+  // Option Templates Functions
+  const openTemplatesModal = async (menuItem) => {
+    setSelectedMenuItem(menuItem)
+    setShowTemplatesModal(true)
+    
+    try {
+      // Load currently assigned templates
+      const assignedTemplates = await ApiService.getMenuItemTemplates(menuItem.id)
+      setSelectedTemplates(assignedTemplates.map(t => t.id))
+    } catch (error) {
+      console.error('Error loading menu item templates:', error)
+      setSelectedTemplates([])
+    }
+  }
+
+  const closeTemplatesModal = () => {
+    setShowTemplatesModal(false)
+    setSelectedMenuItem(null)
+    setSelectedTemplates([])
+  }
+
+  const handleTemplateSelection = (templateId) => {
+    setSelectedTemplates(prev => {
+      if (prev.includes(templateId)) {
+        return prev.filter(id => id !== templateId)
+      } else {
+        return [...prev, templateId]
+      }
+    })
+  }
+
+  const saveTemplateAssignments = async () => {
+    if (!selectedMenuItem) return
+
+    try {
+      await ApiService.assignTemplatesToMenuItem(selectedMenuItem.id, selectedTemplates)
+      await loadMenuItems() // Refresh menu items to show new options
+      closeTemplatesModal()
+      alert('Templates assigned successfully!')
+    } catch (error) {
+      console.error('Error assigning templates:', error)
+      alert('Failed to assign templates. Please try again.')
+    }
+  }
+
+  const openCreateTemplateModal = () => {
+    setEditingTemplate(null)
+    setTemplateForm({
+      name: '',
+      description: '',
+      option_type: 'radio',
+      is_required: false,
+      sort_order: 0,
+      choices: []
+    })
+    setShowCreateTemplateModal(true)
+  }
+
+  const openEditTemplateModal = (template) => {
+    setEditingTemplate(template)
+    setTemplateForm({
+      name: template.name,
+      description: template.description || '',
+      option_type: template.option_type,
+      is_required: template.is_required,
+      sort_order: template.sort_order,
+      choices: template.choices || []
+    })
+    setShowCreateTemplateModal(true)
+  }
+
+  const closeCreateTemplateModal = () => {
+    setShowCreateTemplateModal(false)
+    setEditingTemplate(null)
+    setTemplateForm({
+      name: '',
+      description: '',
+      option_type: 'radio',
+      is_required: false,
+      sort_order: 0,
+      choices: []
+    })
+  }
+
+  const handleTemplateFormChange = (e) => {
+    const { name, value, type, checked } = e.target
+    setTemplateForm(prev => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value
+    }))
+  }
+
+  const addTemplateChoice = () => {
+    setTemplateForm(prev => ({
+      ...prev,
+      choices: [...prev.choices, { name: '', price_modifier: 0, sort_order: prev.choices.length }]
+    }))
+  }
+
+  const updateTemplateChoice = (index, field, value) => {
+    setTemplateForm(prev => ({
+      ...prev,
+      choices: prev.choices.map((choice, i) => 
+        i === index ? { ...choice, [field]: value } : choice
+      )
+    }))
+  }
+
+  const removeTemplateChoice = (index) => {
+    setTemplateForm(prev => ({
+      ...prev,
+      choices: prev.choices.filter((_, i) => i !== index)
+    }))
+  }
+
+  const handleTemplateSubmit = async (e) => {
+    e.preventDefault()
+    
+    try {
+      const templateData = {
+        ...templateForm,
+        choices: templateForm.choices.filter(choice => choice.name.trim() !== '')
+      }
+
+      if (editingTemplate) {
+        await ApiService.updateOptionTemplate(editingTemplate.id, templateData)
+      } else {
+        await ApiService.createOptionTemplate(templateData)
+      }
+
+      await loadOptionTemplates()
+      closeCreateTemplateModal()
+      alert(editingTemplate ? 'Template updated successfully!' : 'Template created successfully!')
+    } catch (error) {
+      console.error('Error saving template:', error)
+      alert('Failed to save template. Please try again.')
+    }
+  }
+
+  const handleDeleteTemplate = async (template) => {
+    if (window.confirm(`Are you sure you want to delete the "${template.name}" template? This will remove it from all menu items that use it.`)) {
+      try {
+        await ApiService.deleteOptionTemplate(template.id)
+        await loadOptionTemplates()
+        await loadMenuItems() // Refresh menu items
+        alert('Template deleted successfully!')
+      } catch (error) {
+        console.error('Error deleting template:', error)
+        alert('Failed to delete template. Please try again.')
+      }
+    }
+  }
+
+  // Menu item functions
+
   return (
     <div className="dashboard-page">
       <DashboardHeader 
@@ -3479,10 +3838,10 @@ const DashboardPage = ({ onLogout }) => {
                     <input
                       type="text"
                       name="schedule"
-                      value={locationForm.schedule}
-                      onChange={handleLocationFormChange}
-                      placeholder="Mon-Sat: 11AM-9PM"
-                    />
+                    value={locationForm.schedule}
+                    onChange={handleLocationFormChange}
+                    placeholder="Mon-Sat: 11AM-9PM"
+                  />
                   </div>
                   <div className="form-group">
                     <label>Phone</label>
@@ -4217,6 +4576,484 @@ const DashboardPage = ({ onLogout }) => {
                   </button>
                 </div>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Menu Item Options Management Modal */}
+        {showOptionsModal && selectedMenuItem && (
+          <div className="modal-overlay" onClick={closeOptionsModal}>
+            <div className="modal-content options-modal" onClick={(e) => e.stopPropagation()}>
+              <div className="modal-header">
+                <h3>
+                  <Settings size={24} />
+                  Manage Options - {selectedMenuItem.name}
+                </h3>
+                <button className="modal-close" onClick={closeOptionsModal}>×</button>
+              </div>
+              
+              <div className="options-content">
+                <div className="options-header">
+                  <p>Configure customization options and toppings for this menu item.</p>
+                  <button className="btn-add-option" onClick={openAddOptionModal}>
+                    <Plus size={16} />
+                    Add Option
+                  </button>
+                </div>
+
+                {isLoadingOptions ? (
+                  <div className="loading-container">
+                    <div className="loading-spinner"></div>
+                    <p>Loading options...</p>
+                  </div>
+                ) : (
+                  <div className="options-list">
+                    {menuItemOptions.length === 0 ? (
+                      <div className="empty-options">
+                        <Settings size={48} />
+                        <h4>No Options Yet</h4>
+                        <p>Add your first customization option to let customers personalize their order.</p>
+                        <button className="btn-add-first-option" onClick={openAddOptionModal}>
+                          <Plus size={16} />
+                          Add First Option
+                        </button>
+                      </div>
+                    ) : (
+                      menuItemOptions.map(option => (
+                        <div key={option.id} className="option-card">
+                          <div className="option-header">
+                            <div className="option-info">
+                              <h4>{option.name}</h4>
+                              <p className="option-description">{option.description}</p>
+                              <div className="option-meta">
+                                <span className={`option-type ${option.option_type}`}>
+                                  {option.option_type === 'radio' ? '◉ Single Choice' : 
+                                   option.option_type === 'checkbox' ? '☐ Multiple Choice' : 
+                                   '▼ Dropdown'}
+                                </span>
+                                <span className={`option-required ${option.is_required ? 'required' : 'optional'}`}>
+                                  {option.is_required ? 'Required' : 'Optional'}
+                                </span>
+                              </div>
+                            </div>
+                            <div className="option-actions">
+                              <button 
+                                className="btn-edit-option"
+                                onClick={() => openEditOptionModal(option)}
+                              >
+                                <Edit3 size={14} />
+                              </button>
+                              <button 
+                                className="btn-delete-option"
+                                onClick={() => handleDeleteOption(option.id)}
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </div>
+                          </div>
+                          
+                          <div className="option-choices">
+                            <h5>Choices ({option.choices?.length || 0}):</h5>
+                            {option.choices && option.choices.length > 0 ? (
+                              <div className="choices-list">
+                                {option.choices.map((choice, index) => (
+                                  <div key={choice.id || index} className="choice-item">
+                                    <span className="choice-name">{choice.name}</span>
+                                    {choice.price_modifier !== 0 && (
+                                      <span className="choice-price">
+                                        {choice.price_modifier > 0 ? '+' : ''}${choice.price_modifier.toFixed(2)}
+                                      </span>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <p className="no-choices">No choices added yet</p>
+                            )}
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Add/Edit Option Modal */}
+        {showAddOptionModal && (
+          <div className="modal-overlay" onClick={closeAddOptionModal}>
+            <div className="modal-content add-option-modal" onClick={(e) => e.stopPropagation()}>
+              <div className="modal-header">
+                <h3>
+                  {editingOption ? <Edit3 size={24} /> : <Plus size={24} />}
+                  {editingOption ? 'Edit Option' : 'Add New Option'}
+                </h3>
+                <button className="modal-close" onClick={closeAddOptionModal}>×</button>
+              </div>
+              
+              <form onSubmit={handleOptionSubmit} className="option-form">
+                <div className="form-group">
+                  <label htmlFor="option-name">Option Name *</label>
+                  <input
+                    type="text"
+                    id="option-name"
+                    name="name"
+                    value={optionForm.name}
+                    onChange={handleOptionFormChange}
+                    placeholder="e.g., Size, Toppings, Spice Level"
+                    required
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="option-description">Description</label>
+                  <textarea
+                    id="option-description"
+                    name="description"
+                    value={optionForm.description}
+                    onChange={handleOptionFormChange}
+                    placeholder="Brief description of this option"
+                    rows="2"
+                  />
+                </div>
+
+                <div className="form-row">
+                  <div className="form-group">
+                    <label htmlFor="option-type">Option Type *</label>
+                    <select
+                      id="option-type"
+                      name="option_type"
+                      value={optionForm.option_type}
+                      onChange={handleOptionFormChange}
+                      required
+                    >
+                      <option value="radio">Single Choice (Radio)</option>
+                      <option value="checkbox">Multiple Choice (Checkbox)</option>
+                      <option value="select">Dropdown (Select)</option>
+                    </select>
+                  </div>
+
+                  <div className="form-group">
+                    <label htmlFor="sort-order">Sort Order</label>
+                    <input
+                      type="number"
+                      id="sort-order"
+                      name="sort_order"
+                      value={optionForm.sort_order}
+                      onChange={handleOptionFormChange}
+                      min="0"
+                    />
+                  </div>
+                </div>
+
+                <div className="form-group checkbox-group">
+                  <label>
+                    <input
+                      type="checkbox"
+                      name="is_required"
+                      checked={optionForm.is_required}
+                      onChange={handleOptionFormChange}
+                    />
+                    Required Option (customers must make a selection)
+                  </label>
+                </div>
+
+                <div className="choices-section">
+                  <div className="choices-header">
+                    <h4>Choices</h4>
+                    <button type="button" className="btn-add-choice" onClick={addChoice}>
+                      <Plus size={16} />
+                      Add Choice
+                    </button>
+                  </div>
+
+                  <div className="choices-list">
+                    {optionForm.choices.map((choice, index) => (
+                      <div key={index} className="choice-form-item">
+                        <div className="choice-inputs">
+                          <input
+                            type="text"
+                            placeholder="Choice name"
+                            value={choice.name}
+                            onChange={(e) => updateChoice(index, 'name', e.target.value)}
+                            required
+                          />
+                          <input
+                            type="number"
+                            placeholder="Price modifier"
+                            value={choice.price_modifier}
+                            onChange={(e) => updateChoice(index, 'price_modifier', parseFloat(e.target.value) || 0)}
+                            step="0.01"
+                          />
+                          <button
+                            type="button"
+                            className="btn-remove-choice"
+                            onClick={() => removeChoice(index)}
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {optionForm.choices.length === 0 && (
+                    <div className="no-choices-message">
+                      <p>No choices added yet. Click "Add Choice" to create options for customers to select.</p>
+                    </div>
+                  )}
+                </div>
+
+                <div className="modal-actions">
+                  <button type="button" className="btn-cancel" onClick={closeAddOptionModal}>
+                    Cancel
+                  </button>
+                  <button type="submit" className="btn-save">
+                    {editingOption ? 'Update Option' : 'Add Option'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* Option Templates Modal */}
+        {showTemplatesModal && (
+          <div className="modal-overlay" onClick={closeTemplatesModal}>
+            <div className="modal-content templates-modal" onClick={(e) => e.stopPropagation()}>
+              <div className="modal-header">
+                <h3>
+                  <Settings size={24} />
+                  Manage Option Templates - {selectedMenuItem?.name || 'Select a Menu Item'}
+                </h3>
+                <button className="modal-close" onClick={closeTemplatesModal}>×</button>
+              </div>
+              
+              <div className="templates-content">
+                <div className="templates-header">
+                  <p>Configure option templates for this menu item.</p>
+                  <button className="btn-add-template" onClick={openCreateTemplateModal}>
+                    <Plus size={16} />
+                    Add Template
+                  </button>
+                </div>
+
+                {isLoadingOptions ? (
+                  <div className="loading-container">
+                    <div className="loading-spinner"></div>
+                    <p>Loading templates...</p>
+                  </div>
+                ) : (
+                  <div className="templates-list">
+                    {optionTemplates.length === 0 ? (
+                      <div className="empty-templates">
+                        <Settings size={48} />
+                        <h4>No Templates Yet</h4>
+                        <p>Add your first template to let customers choose from predefined options.</p>
+                        <button className="btn-add-first-template" onClick={openCreateTemplateModal}>
+                          <Plus size={16} />
+                          Add First Template
+                        </button>
+                      </div>
+                    ) : (
+                      optionTemplates.map(template => (
+                        <div key={template.id} className="template-card">
+                          <div className="template-header">
+                            <div className="template-info">
+                              <h4>{template.name}</h4>
+                              <p className="template-description">{template.description}</p>
+                              <div className="template-meta">
+                                <span className={`template-type ${template.option_type}`}>
+                                  {template.option_type === 'radio' ? '◉ Single Choice' : 
+                                   template.option_type === 'checkbox' ? '☐ Multiple Choice' : 
+                                   '▼ Dropdown'}
+                                </span>
+                                <span className={`template-required ${template.is_required ? 'required' : 'optional'}`}>
+                                  {template.is_required ? 'Required' : 'Optional'}
+                                </span>
+                              </div>
+                            </div>
+                            <div className="template-actions">
+                              <button 
+                                className="btn-edit-template"
+                                onClick={() => openEditTemplateModal(template)}
+                              >
+                                <Edit3 size={14} />
+                              </button>
+                              <button 
+                                className="btn-delete-template"
+                                onClick={() => handleDeleteTemplate(template)}
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </div>
+                          </div>
+                          
+                          <div className="template-choices">
+                            <h5>Choices ({template.choices?.length || 0}):</h5>
+                            {template.choices && template.choices.length > 0 ? (
+                              <div className="choices-list">
+                                {template.choices.map((choice, index) => (
+                                  <div key={choice.id || index} className="choice-item">
+                                    <span className="choice-name">{choice.name}</span>
+                                    {choice.price_modifier !== 0 && (
+                                      <span className="choice-price">
+                                        {choice.price_modifier > 0 ? '+' : ''}${choice.price_modifier.toFixed(2)}
+                                      </span>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <p className="no-choices">No choices added yet</p>
+                            )}
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Add/Edit Template Modal */}
+        {showCreateTemplateModal && (
+          <div className="modal-overlay" onClick={closeCreateTemplateModal}>
+            <div className="modal-content add-template-modal" onClick={(e) => e.stopPropagation()}>
+              <div className="modal-header">
+                <h3>
+                  {editingTemplate ? <Edit3 size={24} /> : <Plus size={24} />}
+                  {editingTemplate ? 'Edit Template' : 'Add New Template'}
+                </h3>
+                <button className="modal-close" onClick={closeCreateTemplateModal}>×</button>
+              </div>
+              
+              <form onSubmit={handleTemplateSubmit} className="template-form">
+                <div className="form-group">
+                  <label htmlFor="template-name">Template Name *</label>
+                  <input
+                    type="text"
+                    id="template-name"
+                    name="name"
+                    value={templateForm.name}
+                    onChange={handleTemplateFormChange}
+                    placeholder="e.g., Small, Medium, Large"
+                    required
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="template-description">Description</label>
+                  <textarea
+                    id="template-description"
+                    name="description"
+                    value={templateForm.description}
+                    onChange={handleTemplateFormChange}
+                    placeholder="Brief description of this template"
+                    rows="2"
+                  />
+                </div>
+
+                <div className="form-row">
+                  <div className="form-group">
+                    <label htmlFor="template-type">Template Type *</label>
+                    <select
+                      id="template-type"
+                      name="option_type"
+                      value={templateForm.option_type}
+                      onChange={handleTemplateFormChange}
+                      required
+                    >
+                      <option value="radio">Single Choice (Radio)</option>
+                      <option value="checkbox">Multiple Choice (Checkbox)</option>
+                      <option value="select">Dropdown (Select)</option>
+                    </select>
+                  </div>
+
+                  <div className="form-group">
+                    <label htmlFor="sort-order">Sort Order</label>
+                    <input
+                      type="number"
+                      id="sort-order"
+                      name="sort_order"
+                      value={templateForm.sort_order}
+                      onChange={handleTemplateFormChange}
+                      min="0"
+                    />
+                  </div>
+                </div>
+
+                <div className="form-group checkbox-group">
+                  <label>
+                    <input
+                      type="checkbox"
+                      name="is_required"
+                      checked={templateForm.is_required}
+                      onChange={handleTemplateFormChange}
+                    />
+                    Required Template (customers must select one)
+                  </label>
+                </div>
+
+                <div className="choices-section">
+                  <div className="choices-header">
+                    <h4>Choices</h4>
+                    <button type="button" className="btn-add-choice" onClick={addTemplateChoice}>
+                      <Plus size={16} />
+                      Add Choice
+                    </button>
+                  </div>
+
+                  <div className="choices-list">
+                    {templateForm.choices.map((choice, index) => (
+                      <div key={index} className="choice-form-item">
+                        <div className="choice-inputs">
+                          <input
+                            type="text"
+                            placeholder="Choice name"
+                            value={choice.name}
+                            onChange={(e) => updateTemplateChoice(index, 'name', e.target.value)}
+                            required
+                          />
+                          <input
+                            type="number"
+                            placeholder="Price modifier"
+                            value={choice.price_modifier}
+                            onChange={(e) => updateTemplateChoice(index, 'price_modifier', parseFloat(e.target.value) || 0)}
+                            step="0.01"
+                          />
+                          <button
+                            type="button"
+                            className="btn-remove-choice"
+                            onClick={() => removeTemplateChoice(index)}
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {templateForm.choices.length === 0 && (
+                    <div className="no-choices-message">
+                      <p>No choices added yet. Click "Add Choice" to create options for customers to select.</p>
+                    </div>
+                  )}
+                </div>
+
+                <div className="modal-actions">
+                  <button type="button" className="btn-cancel" onClick={closeCreateTemplateModal}>
+                    Cancel
+                  </button>
+                  <button type="submit" className="btn-save">
+                    {editingTemplate ? 'Update Template' : 'Add Template'}
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         )}

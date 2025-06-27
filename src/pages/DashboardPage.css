@@ -3429,3 +3429,380 @@
     padding-bottom: 1.5rem !important;
   }
 }
+
+/* Menu Options Management Styles */
+.btn-options {
+  background: #FF9800;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.btn-options:hover {
+  background: #F57C00;
+  transform: translateY(-1px);
+}
+
+.options-modal {
+  max-width: 800px;
+  width: 90vw;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.options-content {
+  padding: 0;
+}
+
+.options-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  border-bottom: 1px solid #e0e0e0;
+  background: #f8f9fa;
+}
+
+.options-header p {
+  margin: 0;
+  color: #666;
+}
+
+.btn-add-option,
+.btn-add-first-option {
+  background: #4CAF50;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn-add-option:hover,
+.btn-add-first-option:hover {
+  background: #45a049;
+  transform: translateY(-1px);
+}
+
+.options-list {
+  padding: 20px;
+}
+
+.empty-options {
+  text-align: center;
+  padding: 40px 20px;
+  color: #666;
+}
+
+.empty-options svg {
+  color: #ccc;
+  margin-bottom: 16px;
+}
+
+.empty-options h4 {
+  margin: 16px 0 8px 0;
+  color: #333;
+}
+
+.empty-options p {
+  margin-bottom: 24px;
+  line-height: 1.5;
+}
+
+.option-card {
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+}
+
+.option-card:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  transform: translateY(-2px);
+}
+
+.option-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 16px;
+}
+
+.option-info h4 {
+  margin: 0 0 8px 0;
+  color: #333;
+  font-size: 1.1rem;
+}
+
+.option-description {
+  margin: 0 0 12px 0;
+  color: #666;
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.option-meta {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.option-type,
+.option-required {
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-transform: uppercase;
+}
+
+.option-type {
+  background: #e3f2fd;
+  color: #1976d2;
+}
+
+.option-required.required {
+  background: #ffebee;
+  color: #d32f2f;
+}
+
+.option-required.optional {
+  background: #e8f5e8;
+  color: #388e3c;
+}
+
+.option-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.btn-edit-option,
+.btn-delete-option {
+  background: none;
+  border: 1px solid #ddd;
+  padding: 6px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-edit-option:hover {
+  background: #2196F3;
+  color: white;
+  border-color: #2196F3;
+}
+
+.btn-delete-option:hover {
+  background: #f44336;
+  color: white;
+  border-color: #f44336;
+}
+
+.option-choices h5 {
+  margin: 0 0 12px 0;
+  color: #333;
+  font-size: 0.95rem;
+}
+
+.choices-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.choice-item {
+  background: #f5f5f5;
+  padding: 6px 12px;
+  border-radius: 16px;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.choice-name {
+  color: #333;
+}
+
+.choice-price {
+  color: #4CAF50;
+  font-weight: 600;
+}
+
+.no-choices {
+  color: #999;
+  font-style: italic;
+  margin: 0;
+}
+
+/* Add/Edit Option Modal */
+.add-option-modal {
+  max-width: 600px;
+  width: 90vw;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.option-form {
+  padding: 20px;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 150px;
+  gap: 16px;
+}
+
+.checkbox-group label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.choices-section {
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid #e0e0e0;
+}
+
+.choices-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.choices-header h4 {
+  margin: 0;
+  color: #333;
+}
+
+.btn-add-choice {
+  background: #2196F3;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.btn-add-choice:hover {
+  background: #1976D2;
+}
+
+.choice-form-item {
+  margin-bottom: 12px;
+}
+
+.choice-inputs {
+  display: grid;
+  grid-template-columns: 1fr 120px 40px;
+  gap: 8px;
+  align-items: center;
+}
+
+.choice-inputs input {
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 0.9rem;
+}
+
+.btn-remove-choice {
+  background: #f44336;
+  color: white;
+  border: none;
+  padding: 6px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-remove-choice:hover {
+  background: #d32f2f;
+}
+
+.no-choices-message {
+  text-align: center;
+  padding: 20px;
+  color: #666;
+  font-style: italic;
+}
+
+.no-choices-message p {
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* Mobile responsiveness for options */
+@media (max-width: 768px) {
+  .options-modal {
+    width: 95vw;
+  }
+  
+  .options-header {
+    flex-direction: column;
+    gap: 12px;
+    align-items: stretch;
+  }
+  
+  .option-header {
+    flex-direction: column;
+    gap: 12px;
+  }
+  
+  .option-actions {
+    align-self: flex-end;
+  }
+  
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+  
+  .choice-inputs {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+  
+  .choice-inputs input:last-child {
+    grid-column: 1;
+  }
+  
+  .btn-remove-choice {
+    justify-self: end;
+    width: 36px;
+    height: 36px;
+  }
+}
+
+/* Loading and Error States */
