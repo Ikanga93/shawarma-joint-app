@@ -155,6 +155,30 @@ const HomePage = () => {
         </div>
       </section>
       
+      {/* Award Recognition Section */}
+      <section className="award-recognition">
+        <div className="container">
+          <div className="award-banner">
+            <div className="award-icon">🏆</div>
+            <div className="award-content">
+              <h3 className="award-title">Voted #1 Best Middle Eastern Food</h3>
+              <p className="award-subtitle">Champaign-Urbana 2025</p>
+              <p className="award-description">
+                Recognized by <strong>The Daily Illini</strong> in their annual "Best of CU" awards
+              </p>
+              <a 
+                href="https://dailyillini.com/buzz-stories/best-of-cu/2025/03/06/2025-best-middle-eastern-food/" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="award-link btn btn-primary"
+              >
+                Read Full Article
+              </a>
+            </div>
+          </div>
+        </div>
+      </section>
+      
       {/* Featured Testimonial Section */}
       <section className="featured-testimonial">
         <div className="container">

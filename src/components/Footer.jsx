@@ -1,6 +1,6 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
-import { Phone, Mail, Facebook } from 'lucide-react'
+import { Phone, Mail, Facebook, Instagram } from 'lucide-react'
 import Logo from './Logo'
 import './Footer.css'
 
@@ -17,7 +17,7 @@ const Footer = () => {
                 <p>Authentic Mediterranean cuisine made with love and tradition.</p>
               </div>
             </div>
-            <div className="footer-emoji">🌮❤️🇲🇽</div>
+            <div className="footer-emoji">🥙❤️🌿</div>
           </div>
           
           <div className="footer-links">
@@ -31,40 +31,20 @@ const Footer = () => {
                 <li><Link to="/location">Location</Link></li>
               </ul>
             </div>
-            
-            <div className="footer-section"> 
-              <div className="business-hours">
-                <h4>Hours</h4>
-                <p>Mon-Thu: 11AM-9PM</p>
-                <p>Fri-Sat: 11AM-10PM</p>
-                <p>Sun: 12PM-8PM</p>
-              </div>
-            </div>
 
             <div className="footer-section">
               <h4>Connect With Us</h4>
               <div className="contact-icons">
                 <a href="mailto:mosrestaurant19@gmail.com" className="contact-icon-link" title="Email us">
-                  
+                  <Mail size={20} />
                 </a>
                 <a href="https://www.facebook.com/profile.php?id=100066724737090" target="_blank" rel="noopener noreferrer" className="contact-icon-link" title="Follow us on Facebook">
-                  
+                  <Facebook size={20} />
                 </a>
                 <a href="https://www.instagram.com/shawarmajoinchampaign" target="_blank" rel="noopener noreferrer" className="contact-icon-link" title="Follow us on Instagram">
-                  
+                  <Instagram size={20} />
                 </a>
               </div>
-            </div>
-
-            <div className="footer-section">
-              <h4>Services</h4>
-              <ul>
-                <li>Dine-in</li>
-                <li>Takeout</li>
-                <li>In-store pickup</li>
-                <li>Catering</li>
-                <li>Private Events</li>
-              </ul>
             </div>
           </div>
         </div>
