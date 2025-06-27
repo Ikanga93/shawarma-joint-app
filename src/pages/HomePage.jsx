@@ -126,7 +126,7 @@ const HomePage = () => {
           </p>
           
           <div className="features-container">
-            <div className="features-scroll">
+            <div className="features-grid">
               <div className="feature-item">
                 <div className="feature-icon">🏺</div>
                 <h3>Traditional Recipes</h3>
