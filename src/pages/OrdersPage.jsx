@@ -46,7 +46,9 @@ const OrdersPage = () => {
 
     try {
       setIsLoading(true)
+      console.log('Fetching orders for user:', user.id)
       const customerOrders = await ApiService.getCustomerOrders(user.id)
+      console.log('Customer orders received:', customerOrders)
       setOrders(customerOrders)
       setError(null)
     } catch (error) {

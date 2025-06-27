@@ -1,46 +1,42 @@
-import React from 'react'
-import { ArrowLeft, MapPin, Navigation, Clock, Phone, Calendar } from 'lucide-react'
+import React, { useState, useEffect } from 'react'
+import { ArrowLeft, MapPin, Navigation, Clock, Phone, Calendar, AlertCircle } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import ApiService from '../services/ApiService'
 import './LocationPage.css'
 
 const LocationPage = () => {
-  // State for locations from admin dashboard
-  const [scheduledLocations, setScheduledLocations] = React.useState([])
-  const [liveLocations, setLiveLocations] = React.useState([])
-  const [isLoadingScheduled, setIsLoadingScheduled] = React.useState(true)
-  const [isLoadingLive, setIsLoadingLive] = React.useState(true)
+  const [locations, setLocations] = useState([])
+  const [liveLocations, setLiveLocations] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
 
-  // Fetch both scheduled and live locations on component mount
-  React.useEffect(() => {
+  useEffect(() => {
     const fetchLocations = async () => {
       try {
-        // Fetch scheduled locations from admin dashboard
+        setLoading(true)
+        
+        // Fetch scheduled locations
         const scheduledData = await ApiService.getLocations()
-        setScheduledLocations(scheduledData.filter(location => location.status === 'active'))
-      } catch (error) {
-        console.warn('Scheduled locations not available:', error)
-        setScheduledLocations([])
+        setLocations(scheduledData)
+        
+        // Fetch live locations
+        try {
+          const liveData = await ApiService.getLiveLocations()
+          setLiveLocations(liveData)
+        } catch (liveError) {
+          console.warn('Live locations not available:', liveError)
+          // Don't fail the whole page if live locations fail
+        }
+        
+      } catch (err) {
+        console.error('Error fetching locations:', err)
+        setError('Failed to load location information')
       } finally {
-        setIsLoadingScheduled(false)
-      }
-    }
-
-    const fetchLiveLocations = async () => {
-      try {
-        // Fetch live locations from admin dashboard
-        const liveData = await ApiService.getLiveLocations()
-        setLiveLocations(liveData.filter(location => location.is_active))
-      } catch (error) {
-        console.warn('Live locations not available:', error)
-        setLiveLocations([])
-      } finally {
-        setIsLoadingLive(false)
+        setLoading(false)
       }
     }
 
     fetchLocations()
-    fetchLiveLocations()
   }, [])
 
   const openInMaps = (coordinates, address) => {
@@ -71,7 +67,7 @@ const LocationPage = () => {
 
   // Update today's location based on actual current day
   const currentDay = getCurrentDayName()
-  const actualTodayLocation = scheduledLocations.find(schedule => schedule.day === currentDay)
+  const actualTodayLocation = locations.find(location => location.day === currentDay)
 
   return (
     <div className="location-page">
@@ -89,7 +85,7 @@ const LocationPage = () => {
       </div>
 
       {/* Live Locations Section */}
-      {!isLoadingLive && liveLocations.length > 0 && (
+      {!loading && liveLocations.length > 0 && (
         <div className="live-locations">
           <div className="container">
             <h2 className="live-locations-title">🚚 Food Trucks Right Now!</h2>
@@ -168,7 +164,7 @@ const LocationPage = () => {
       )}
 
       {/* Scheduled Locations */}
-      {!isLoadingScheduled && scheduledLocations.length > 0 && (
+      {!loading && locations.length > 0 && (
         <div className="weekly-schedule">
           <div className="container">
             <h2 className="schedule-title">Our Locations</h2>
@@ -177,7 +173,7 @@ const LocationPage = () => {
             </p>
             
             <div className="schedule-grid">
-              {scheduledLocations.map((location) => (
+              {locations.map((location) => (
                 <div key={location.id} className="schedule-card">
                   <div className="schedule-header">
                     <h3 className="schedule-day">{location.name}</h3>
@@ -227,7 +223,7 @@ const LocationPage = () => {
       )}
 
       {/* Loading States */}
-      {(isLoadingScheduled || isLoadingLive) && (
+      {loading && (
         <div className="loading-section">
           <div className="container">
             <div className="loading-message">
@@ -238,7 +234,7 @@ const LocationPage = () => {
       )}
 
       {/* Empty State */}
-      {!isLoadingScheduled && !isLoadingLive && scheduledLocations.length === 0 && liveLocations.length === 0 && (
+      {!loading && locations.length === 0 && liveLocations.length === 0 && (
         <div className="empty-locations">
           <div className="container">
             <div className="empty-message">

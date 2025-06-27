@@ -7,7 +7,7 @@ import {
   useElements
 } from '@stripe/react-stripe-js'
 import { CreditCard, Lock, ArrowLeft } from 'lucide-react'
-import ApiService from '../services/api'
+import ApiService from '../services/ApiService'
 import './StripeCheckout.css'
 
 // Initialize Stripe

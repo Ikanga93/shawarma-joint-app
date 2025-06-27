@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { CheckCircle, Clock, ChefHat, Bell, MapPin, AlertCircle } from 'lucide-react'
-import { useSearchParams, useParams } from 'react-router-dom'
-import ApiService from '../services/api'
+import { useSearchParams, useParams, useNavigate } from 'react-router-dom'
+import ApiService from '../services/ApiService'
 import SocketService from '../services/socket'
 import './OrderTrackingPage.css'
 
