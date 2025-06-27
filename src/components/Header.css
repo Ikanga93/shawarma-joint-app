@@ -26,59 +26,77 @@
 .logo {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
   text-decoration: none;
   color: var(--dark-brown);
   z-index: 101;
+  flex-shrink: 0;
+  max-width: calc(100vw - 140px); /* Leave space for cart and menu buttons */
 }
 
 .logo-brand {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
+  min-width: 0; /* Allow shrinking */
 }
 
 .brand-text {
   display: flex;
   flex-direction: column;
+  min-width: 0; /* Allow shrinking */
 }
 
 .logo-image {
   flex-shrink: 0;
+  width: 32px;
+  height: 32px;
 }
 
 .logo-text h1 {
-  font-size: 1.4rem;
+  font-size: 1.2rem;
   font-weight: 700;
   margin: 0;
   color: var(--dark-brown);
   line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .brand-text h1 {
-  font-size: 1.4rem;
+  font-size: 1.2rem;
   font-weight: 700;
   margin: 0;
   color: #7CB342;
   line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .logo-text span {
-  font-size: 0.7rem;
+  font-size: 0.65rem;
   color: var(--text-light);
   font-weight: 400;
   display: block;
   line-height: 1;
   margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .brand-text span {
-  font-size: 0.7rem;
+  font-size: 0.65rem;
   color: var(--text-light);
   font-weight: 400;
   display: block;
   line-height: 1;
   margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* Mobile Menu Toggle */
@@ -97,6 +115,7 @@
   min-height: 44px;
   z-index: 101;
   order: 3; /* Ensure it appears after cart button */
+  flex-shrink: 0;
 }
 
 .menu-toggle:hover {
@@ -202,18 +221,16 @@
 
 .mobile-menu-item:hover {
   background: var(--cream);
-  color: var(--primary-red);
+  transform: translateX(8px);
 }
 
 .mobile-logout {
+  border-top: 1px solid #e0e0e0;
   color: #7CB342;
-  border: 1px solid #7CB342;
-  margin-top: 8px;
 }
 
 .mobile-logout:hover {
-  background: #7CB342;
-  color: white;
+  background: #ffebee;
 }
 
 .mobile-auth-buttons {
@@ -223,18 +240,20 @@
 }
 
 .mobile-login-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 16px 24px;
+  display: block;
+  padding: 16px 20px;
   background: #7CB342;
   color: white;
   text-decoration: none;
   border-radius: 12px;
   font-weight: 600;
   font-size: 1.1rem;
+  text-align: center;
   transition: all 0.3s ease;
   min-height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .mobile-login-btn:hover {
@@ -242,18 +261,16 @@
   transform: translateY(-2px);
 }
 
-/* Header Actions */
 .header-actions {
   display: flex;
   align-items: center;
-  gap: 12px;
-  z-index: 101;
+  gap: 8px;
+  flex-shrink: 0;
 }
 
-/* Desktop Authentication (Hidden on Mobile) */
+/* Desktop Authentication */
 .desktop-auth {
   display: none;
-  order: 1;
 }
 
 .user-menu-trigger {
@@ -262,24 +279,22 @@
   gap: 8px;
   padding: 8px 16px;
   background: none;
-  border: 1px solid #e0e0e0;
+  border: none;
   border-radius: 25px;
   cursor: pointer;
   transition: all 0.3s ease;
-  font-family: 'Fredoka', sans-serif;
-  font-size: 0.9rem;
   color: var(--dark-brown);
+  font-weight: 500;
+  font-size: 0.9rem;
   min-height: 44px;
 }
 
 .user-menu-trigger:hover {
-  border-color: #7CB342;
-  background: #fafafa;
+  background: var(--cream);
 }
 
 .user-name {
-  font-weight: 500;
-  max-width: 120px;
+  max-width: 100px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -292,17 +307,16 @@
   background: white;
   border: 1px solid #e0e0e0;
   border-radius: 12px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
   min-width: 180px;
   z-index: 1000;
   overflow: hidden;
-  margin-top: 8px;
 }
 
 .dropdown-item {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
   padding: 12px 16px;
   color: var(--dark-brown);
   text-decoration: none;
@@ -319,7 +333,6 @@
 
 .dropdown-item:hover {
   background: var(--cream);
-  color: #7CB342;
 }
 
 .dropdown-logout {
@@ -370,12 +383,13 @@
   color: white;
   border: none;
   border-radius: 50%;
-  width: 48px;
-  height: 48px;
+  width: 44px;
+  height: 44px;
   cursor: pointer;
   transition: none;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
   order: 2; /* Ensure it appears before hamburger menu */
+  flex-shrink: 0;
 }
 
 .cart-btn:hover {
@@ -402,6 +416,70 @@
   border: 2px solid white;
 }
 
+/* Small Mobile Responsive */
+@media (max-width: 480px) {
+  .container {
+    padding: 0 12px;
+  }
+
+  .logo {
+    gap: 6px;
+    max-width: calc(100vw - 120px);
+  }
+
+  .logo-brand {
+    gap: 6px;
+  }
+
+  .logo-image {
+    width: 28px;
+    height: 28px;
+  }
+
+  .brand-text h1 {
+    font-size: 1.1rem;
+  }
+
+  .brand-text span {
+    font-size: 0.6rem;
+  }
+
+  .cart-btn {
+    width: 40px;
+    height: 40px;
+  }
+
+  .menu-toggle {
+    min-width: 40px;
+    min-height: 40px;
+    padding: 6px;
+  }
+}
+
+/* Extra Small Mobile Responsive */
+@media (max-width: 360px) {
+  .container {
+    padding: 0 10px;
+  }
+
+  .logo {
+    max-width: calc(100vw - 110px);
+  }
+
+  .brand-text h1 {
+    font-size: 1rem;
+  }
+
+  .brand-text span {
+    font-size: 0.55rem;
+  }
+
+  .logo-image {
+    width: 26px;
+    height: 26px;
+  }
+}
+
 /* Tablet Styles (768px and up) */
 @media (min-width: 768px) {
   .container {
@@ -411,13 +489,33 @@
   .header-content {
     padding: 16px 0;
   }
-  
-  .logo-text h1 {
-    font-size: 1.6rem;
+
+  .logo {
+    gap: 12px;
+    max-width: none;
+  }
+
+  .logo-brand {
+    gap: 12px;
+  }
+
+  .logo-image {
+    width: 36px;
+    height: 36px;
   }
   
-  .logo-text span {
+  .logo-text h1, .brand-text h1 {
+    font-size: 1.6rem;
+    white-space: normal;
+    overflow: visible;
+    text-overflow: unset;
+  }
+  
+  .logo-text span, .brand-text span {
     font-size: 0.8rem;
+    white-space: normal;
+    overflow: visible;
+    text-overflow: unset;
   }
   
   .menu-toggle {
@@ -485,12 +583,21 @@
   .logo {
     gap: 16px;
   }
+
+  .logo-brand {
+    gap: 16px;
+  }
+
+  .logo-image {
+    width: 40px;
+    height: 40px;
+  }
   
-  .logo-text h1 {
+  .logo-text h1, .brand-text h1 {
     font-size: 1.8rem;
   }
   
-  .logo-text span {
+  .logo-text span, .brand-text span {
     font-size: 0.85rem;
   }
   
