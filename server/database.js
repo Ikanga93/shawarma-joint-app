@@ -31,13 +31,8 @@ console.log('hasPostgresUrl:', hasPostgresUrl)
 let db
 let isPostgreSQL = false
 
-if (isDevelopment) {
-  // Development only: Use SQLite
-  console.log('🔧 Development mode: Using SQLite database')
-  const dbPath = path.join(__dirname, 'orders.db')
-  db = new sqlite3.Database(dbPath)
-  isPostgreSQL = false
-} else if (hasPostgresUrl) {
+// TEMPORARY: Use SQLite for now until PostgreSQL is properly configured
+if (false && hasPostgresUrl) { // Disabled PostgreSQL temporarily
   // Production: Use PostgreSQL on Railway
   console.log('🚀 Production mode: Using PostgreSQL database')
   console.log('🔗 Database URL found:', railwayDatabaseUrl ? 'Yes (hidden for security)' : 'No')
@@ -63,12 +58,9 @@ if (isDevelopment) {
   db = pool
   isPostgreSQL = true
 } else {
-  // Production fallback - but this should not happen on Railway
-  console.error('❌ CRITICAL: No PostgreSQL database URL found in production!')
-  console.error('❌ Please configure DATABASE_URL in Railway environment variables')
-  console.error('❌ Using SQLite as emergency fallback, but this will lose data on restart!')
-  
-  const dbPath = './orders.db'
+  // Use SQLite for now (both development and production)
+  console.log('🔧 Using SQLite database (temporary solution)')
+  const dbPath = isDevelopment ? path.join(__dirname, 'orders.db') : './orders.db'
   db = new sqlite3.Database(dbPath)
   isPostgreSQL = false
 }
