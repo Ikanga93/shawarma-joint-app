@@ -238,6 +238,7 @@
   }
 }
 
+/* Tablet Responsive */
 @media (max-width: 1024px) {
   .hero-title {
     font-size: 3.5rem;
@@ -255,17 +256,31 @@
   }
 }
 
+/* Mobile Responsive */
 @media (max-width: 768px) {
   .hero {
     padding-top: 0;
     min-height: 100vh;
-    min-height: 100svh;
+    min-height: 100svh; /* Support for newer browsers */
+  }
+
+  /* Optimize video for mobile */
+  .hero-video {
+    /* Ensure video covers the container properly on mobile */
+    width: 100vw;
+    height: 100vh;
+    min-width: 100vw;
+    min-height: 100vh;
+    max-width: none;
+    max-height: none;
+    object-fit: cover;
+    object-position: center center;
   }
 
   .hero-content {
     padding: 30px 20px;
     min-height: 100vh;
-    min-height: 100svh;
+    min-height: 100svh; /* Support for newer browsers */
   }
 
   .hero-text {
@@ -310,7 +325,20 @@
   }
 }
 
+/* Small Mobile Responsive */
 @media (max-width: 480px) {
+  /* Further optimize video for small mobile */
+  .hero-video {
+    width: 100vw;
+    height: 100vh;
+    min-width: 100vw;
+    min-height: 100vh;
+    /* Scale down slightly for very small screens */
+    transform: translate(-50%, -50%) scale(1.1);
+    object-fit: cover;
+    object-position: center center;
+  }
+
   .hero-content {
     padding: 20px 15px;
   }
@@ -340,7 +368,20 @@
   }
 }
 
+/* Extra Small Mobile Responsive */
 @media (max-width: 360px) {
+  /* Optimize video for extra small screens */
+  .hero-video {
+    width: 100vw;
+    height: 100vh;
+    min-width: 100vw;
+    min-height: 100vh;
+    /* Slight scale adjustment for very small screens */
+    transform: translate(-50%, -50%) scale(1.05);
+    object-fit: cover;
+    object-position: center center;
+  }
+
   .hero-title {
     font-size: 1.8rem;
     margin-bottom: 18px;
@@ -358,9 +399,21 @@
   }
 }
 
+/* Landscape Mobile Responsive */
 @media (max-height: 500px) and (orientation: landscape) {
   .hero {
     min-height: 100vh;
+  }
+
+  /* Optimize video for landscape mobile */
+  .hero-video {
+    width: 100vw;
+    height: 100vh;
+    min-width: 100vw;
+    min-height: 100vh;
+    transform: translate(-50%, -50%);
+    object-fit: cover;
+    object-position: center center;
   }
 
   .hero-content {
