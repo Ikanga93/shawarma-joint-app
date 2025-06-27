@@ -4,6 +4,10 @@ import path from 'path'
 import { fileURLToPath } from 'url'
 import bcrypt from 'bcryptjs'
 import { v4 as uuidv4 } from 'uuid'
+import dotenv from 'dotenv'
+
+// Load environment variables FIRST before any database configuration
+dotenv.config()
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
