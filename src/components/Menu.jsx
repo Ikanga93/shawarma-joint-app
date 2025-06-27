@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react'
 import { ShoppingCart, Plus, Minus, ChevronDown, ChevronUp } from 'lucide-react'
 import { useCart } from '../context/CartContext'
-import ApiService from '../services/ApiService'
-import API_BASE_URL from '../config/api.js'
+import { supabase } from '../lib/supabase'
 import './Menu.css'
 
 const Menu = () => {
@@ -22,66 +21,43 @@ const Menu = () => {
       setLoading(true)
       setError(null)
       
-      // Check if we have cached menu items (without images to save space)
-      const cachedItems = sessionStorage.getItem('menuItems')
-      const cacheTimestamp = sessionStorage.getItem('menuItemsTimestamp')
-      const now = Date.now()
-      const cacheExpiry = 5 * 60 * 1000 // 5 minutes
+      console.log('Fetching menu items from Supabase')
       
-      // If we have valid cache, load it first for faster display
-      if (cachedItems && cacheTimestamp && (now - parseInt(cacheTimestamp)) < cacheExpiry) {
-        console.log('Loading menu items from cache')
-        try {
-          const cachedData = JSON.parse(cachedItems)
-          setMenuItems(cachedData.filter(item => item.available))
-          setLoading(false)
-          
-          // Still fetch fresh data in the background to get images
-          console.log('Fetching fresh data for images in background')
-          const freshData = await ApiService.getMenuItems()
-          
-          // Merge cached data with fresh images
-          const mergedData = cachedData.map(cachedItem => {
-            const freshItem = freshData.find(fresh => fresh.id === cachedItem.id)
-            return freshItem ? { ...cachedItem, image_url: freshItem.image_url } : cachedItem
-          })
-          
-          setMenuItems(mergedData.filter(item => item.available))
-          return
-        } catch (cacheError) {
-          console.error('Cache parsing failed, fetching fresh data:', cacheError)
-          // Continue to fetch fresh data
-        }
+      // Fetch menu items with their categories
+      const { data: menuItemsData, error: menuError } = await supabase
+        .from('menu_items')
+        .select(`
+          *,
+          menu_categories (
+            name
+          )
+        `)
+        .eq('available', true)
+        .order('display_order', { ascending: true })
+
+      if (menuError) {
+        throw menuError
       }
-      
-      console.log('Fetching menu items from API')
-      const data = await ApiService.getMenuItems()
-      
-      // Cache the results WITHOUT base64 images to prevent quota exceeded errors
-      const dataToCache = data.map(item => {
-        const { image_url, ...itemWithoutImage } = item
-        // Only store image URLs, not base64 data
-        return {
-          ...itemWithoutImage,
-          image_url: image_url && image_url.startsWith('data:') ? null : image_url
-        }
-      })
-      
-      try {
-        sessionStorage.setItem('menuItems', JSON.stringify(dataToCache))
-        sessionStorage.setItem('menuItemsTimestamp', now.toString())
-      } catch (quotaError) {
-        console.warn('SessionStorage quota exceeded, skipping cache:', quotaError)
-        // Continue without caching rather than breaking the app
-      }
-      
-      // Process menu items to add options structure if not present
-      const processedData = data.map(item => {
-        // Add default options for certain categories if not present
-        let defaultOptions = [];
+
+      // Transform the data to match the expected format
+      const processedData = menuItemsData.map(item => ({
+        id: item.id,
+        name: item.name,
+        description: item.description,
+        price: parseFloat(item.price),
+        category: item.menu_categories?.name || 'Other',
+        image_url: item.image_url,
+        emoji: item.emoji,
+        available: item.available,
+        options: [] // We'll add default options below if needed
+      }))
+
+      // Add default options for certain categories
+      const processedWithOptions = processedData.map(item => {
+        let defaultOptions = []
         
         // Add size options for main items
-        if (['Burritos', 'Tacos', 'Quesadillas'].includes(item.category) && (!item.options || item.options.length === 0)) {
+        if (['Shawarma', 'Kebabs', 'Mediterranean Plates'].includes(item.category)) {
           defaultOptions.push({
             id: `${item.id}-size`,
             name: 'Size',
@@ -89,35 +65,40 @@ const Menu = () => {
             required: true,
             multiSelect: false,
             choices: [
-              { id: 'small', name: 'Small', price: -1.00 },
+              { id: 'small', name: 'Small', price: -2.00 },
               { id: 'medium', name: 'Medium', price: 0 },
-              { id: 'large', name: 'Large', price: 1.00 }
+              { id: 'large', name: 'Large', price: 2.00 }
             ]
-          });
+          })
+        }
+        
+        // Add spice level for main dishes
+        if (['Shawarma', 'Kebabs'].includes(item.category)) {
+          defaultOptions.push({
+            id: `${item.id}-spice`,
+            name: 'Spice Level',
+            description: 'How spicy would you like it?',
+            required: false,
+            multiSelect: false,
+            choices: [
+              { id: 'mild', name: 'Mild', price: 0 },
+              { id: 'medium', name: 'Medium', price: 0 },
+              { id: 'hot', name: 'Hot', price: 0 },
+              { id: 'extra-hot', name: 'Extra Hot', price: 0 }
+            ]
+          })
         }
         
         return {
           ...item,
           options: defaultOptions
-        };
-      });
+        }
+      })
       
-      setMenuItems(processedData.filter(item => item.available));
+      setMenuItems(processedWithOptions)
     } catch (err) {
       console.error('Error loading menu items:', err)
       setError('Failed to load menu items. Please try again later.')
-      
-      // Try to load from cache even if expired as fallback
-      const cachedItems = sessionStorage.getItem('menuItems')
-      if (cachedItems) {
-        console.log('Loading expired cache as fallback')
-        try {
-          const data = JSON.parse(cachedItems)
-          setMenuItems(data.filter(item => item.available))
-        } catch (cacheError) {
-          console.error('Cache fallback failed:', cacheError)
-        }
-      }
     } finally {
       setLoading(false)
     }

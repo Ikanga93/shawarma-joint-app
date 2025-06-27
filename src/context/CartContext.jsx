@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react'
-import ApiService from '../services/ApiService'
+import { supabase } from '../lib/supabase'
 import API_BASE_URL from '../config/api.js'
 
 const CartContext = createContext()
@@ -38,7 +38,16 @@ export const CartProvider = ({ children }) => {
   // Restore cart items with images from menu data
   const restoreCartItemsWithImages = async (cartItems) => {
     try {
-      const menuItems = await ApiService.getMenuItems()
+      // Fetch menu items from Supabase
+      const { data: menuItems, error } = await supabase
+        .from('menu_items')
+        .select('id, image_url, emoji, description')
+        .eq('available', true)
+
+      if (error) {
+        throw error
+      }
+
       const menuItemsMap = new Map(menuItems.map(item => [item.id, item]))
       
       const restoredItems = cartItems.map(cartItem => {

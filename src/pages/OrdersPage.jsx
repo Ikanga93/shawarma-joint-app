@@ -18,7 +18,7 @@ import {
 } from 'lucide-react'
 import { useCustomerAuth } from '../contexts/CustomerAuthContext'
 import { useCart } from '../context/CartContext'
-import ApiService from '../services/ApiService'
+import { supabase } from '../lib/supabase'
 import './OrdersPage.css'
 
 const OrdersPage = () => {
@@ -46,8 +46,43 @@ const OrdersPage = () => {
 
     try {
       setIsLoading(true)
-      const customerOrders = await ApiService.getCustomerOrders(user.id)
-      setOrders(customerOrders)
+      
+      // Fetch orders with their items
+      const { data: ordersData, error: ordersError } = await supabase
+        .from('orders')
+        .select(`
+          *,
+          order_items (
+            *
+          )
+        `)
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+
+      if (ordersError) {
+        throw ordersError
+      }
+
+      // Transform the data to match the expected format
+      const transformedOrders = ordersData.map(order => ({
+        id: order.id,
+        status: order.status,
+        total: parseFloat(order.total_amount),
+        order_time: order.created_at,
+        pickup_time: order.pickup_time,
+        customer_name: order.customer_name,
+        customer_phone: order.customer_phone,
+        special_instructions: order.special_instructions,
+        items: order.order_items.map(item => ({
+          id: item.menu_item_id,
+          name: item.item_name,
+          price: parseFloat(item.price),
+          quantity: item.quantity,
+          emoji: item.emoji || '🍽️'
+        }))
+      }))
+
+      setOrders(transformedOrders)
       setError(null)
     } catch (error) {
       console.error('Error loading orders:', error)

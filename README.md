@@ -1,65 +1,39 @@
 # 🥙 Shawarma Joint - Mediterranean Restaurant App
 
-A modern, full-stack restaurant web application for **Shawarma Joint**, a Mediterranean restaurant in Champaign-Urbana. Built with React, Supabase, and deployed on Vercel.
-
-![Shawarma Joint](public/shawarma-joint-logo.jpg)
+A modern, full-stack restaurant application built with React and Supabase, featuring online ordering, user authentication, and real-time order management.
 
 ## 🌟 Features
 
-### 🍽️ Customer Experience
-- **Beautiful Homepage** with video background and modern design
-- **Interactive Menu** with categories (Shawarma, Kebabs, Mediterranean Plates, etc.)
-- **User Authentication** - Register, login, and manage account
-- **Shopping Cart** with real-time updates
-- **Order Placement** with customer information
-- **Responsive Design** - works on all devices
-- **Real Customer Reviews** from Google Reviews
-
-### 🎨 Design & Branding
-- **Custom Logo Integration** with brand colors
-- **Mediterranean Theme** with green (#7CB342) and orange-red (#FF5722) color scheme
-- **Professional Typography** with gradient effects
-- **Video Background** for engaging hero section
-- **Modern UI/UX** following best practices
-
-### 🔧 Technical Features
-- **React 18** with modern hooks and functional components
-- **Supabase Backend** for database, authentication, and real-time features
-- **Row Level Security** for data protection
-- **Responsive CSS** with mobile-first approach
-- **Environment Configuration** for development and production
-- **SEO Optimized** with proper meta tags
+- **🍽️ Interactive Menu** - Browse Mediterranean dishes with categories and options
+- **👤 User Authentication** - Secure registration and login with Supabase Auth
+- **🛒 Shopping Cart** - Add items with customization options
+- **📱 Responsive Design** - Works perfectly on desktop, tablet, and mobile
+- **⚡ Real-time Updates** - Powered by Supabase real-time subscriptions
+- **🎨 Modern UI** - Beautiful Mediterranean-themed design
+- **📊 Order Management** - Track order history and status
 
 ## 🏗️ Tech Stack
 
-### Frontend
-- **React 18** - Modern JavaScript framework
-- **React Router** - Client-side routing
-- **Lucide React** - Beautiful icons
-- **CSS3** - Custom styling with flexbox and grid
+**Frontend:**
+- React 18 with Vite
+- React Router for navigation
+- Lucide React for icons
+- CSS3 with modern animations
 
-### Backend & Database
-- **Supabase** - Backend-as-a-Service
-  - PostgreSQL database
-  - Authentication system
-  - Real-time subscriptions
-  - Row Level Security (RLS)
-  - Auto-generated APIs
+**Backend:**
+- Supabase (Database + Authentication + APIs)
+- PostgreSQL database
+- Row Level Security (RLS)
+- Real-time subscriptions
 
-### Deployment
-- **Vercel** - Frontend hosting and deployment
-- **GitHub** - Version control and CI/CD
-
-### Development Tools
-- **Vite** - Fast build tool and dev server
-- **ESLint** - Code linting
-- **Concurrently** - Run multiple commands
+**Deployment:**
+- Vercel (Frontend hosting)
+- Supabase (Backend services)
 
 ## 🚀 Quick Start
 
 ### Prerequisites
-- Node.js 18+ 
-- npm or yarn
+- Node.js 18+
 - Supabase account
 - Vercel account (for deployment)
 
@@ -78,86 +52,64 @@ A modern, full-stack restaurant web application for **Shawarma Joint**, a Medite
 
 3. **Set up environment variables**
    ```bash
-   # Copy the example file
-   cp env.example .env
+   cp .env.example .env.local
+   ```
    
-   # Edit .env with your Supabase credentials
-   VITE_SUPABASE_URL=your_supabase_project_url
-   VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+   Add your Supabase credentials:
+   ```env
+   VITE_SUPABASE_URL=https://your-project-id.supabase.co
+   VITE_SUPABASE_ANON_KEY=your-anon-key
    ```
 
-4. **Set up Supabase database**
-   - Create a new Supabase project
-   - Run the SQL from `supabase-schema.sql` in your Supabase SQL Editor
-   - Get your project URL and API key from Settings > API
-
-5. **Start development server**
+4. **Start development server**
    ```bash
    npm run dev
    ```
 
-6. **Open your browser**
-   - Frontend: http://localhost:5173
-   - Your app should now be running locally!
+5. **Open your browser**
+   ```
+   http://localhost:5173
+   ```
+
+## 🗄️ Database Setup
+
+1. Create a new Supabase project
+2. Run the SQL schema from `supabase-schema.sql`
+3. Get your project URL and anon key from Supabase settings
+
+The schema includes:
+- User management with RLS policies
+- Menu categories and items
+- Order and order items tables
+- Sample Mediterranean menu data
 
 ## 🌐 Deployment
 
-This app is designed to be deployed using **Supabase + Vercel** for the best developer experience and performance.
+Deploy in under 15 minutes using our quick setup guide:
 
-### Quick Deploy to Vercel
+- **📋 Quick Setup**: See [SETUP-CHECKLIST.md](./SETUP-CHECKLIST.md)
+- **📖 Detailed Guide**: See [DEPLOYMENT.md](./DEPLOYMENT.md)
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/your-username/shawarma-joint-app)
+**Architecture**: Frontend on Vercel + Supabase backend
 
-### Manual Deployment
+## 📱 Screenshots
 
-For detailed deployment instructions, see [DEPLOYMENT.md](./DEPLOYMENT.md)
+### Homepage
+- Hero section with video background
+- Featured menu items
+- Customer testimonials
 
-**Quick Steps:**
-1. Create a Supabase project and run the schema
-2. Push your code to GitHub
-3. Connect your GitHub repo to Vercel
-4. Add environment variables in Vercel
-5. Deploy!
+### Menu
+- Categorized Mediterranean dishes
+- Item customization options
+- Add to cart functionality
 
-## 📊 Database Schema
+### User Dashboard
+- Order history
+- Account management
+- Real-time order tracking
 
-The app uses a comprehensive database schema with the following main tables:
-
-- **users** - User profiles and authentication
-- **menu_categories** - Menu organization (Shawarma, Kebabs, etc.)
-- **menu_items** - Individual menu items with pricing
-- **orders** - Customer orders with status tracking
-- **order_items** - Individual items within orders
-- **customer_profiles** - Extended customer information
-
-All tables include Row Level Security (RLS) policies for data protection.
-
-## 🎯 Business Information
-
-**Shawarma Joint**
-- **Address**: 627 East Green Street, Champaign, IL
-- **Phone**: (217) 552-1320
-- **Email**: info@shawarmajointerestaurant.com
-- **Facebook**: [ShawarmaJointCU](https://www.facebook.com/ShawarmaJointCU/)
-- **Cuisine**: Mediterranean
-- **Tagline**: "From our kitchen to your plate - the best Mediterranean food (and the largest portions 👀) in Champaign-Urbana"
-
-## 🛠️ Development
-
-### Project Structure
-```
-shawarma-joint-app/
-├── public/                 # Static assets
-├── src/
-│   ├── components/        # Reusable components
-│   ├── pages/            # Page components
-│   ├── lib/              # Utilities and configurations
-│   ├── config/           # Business configuration
-│   └── assets/           # Images, videos, etc.
-├── supabase-schema.sql   # Database schema
-├── vercel.json          # Vercel configuration
-└── DEPLOYMENT.md        # Deployment guide
-```
+## 🔧 Development
 
 ### Available Scripts
 
@@ -168,59 +120,78 @@ npm run preview      # Preview production build
 npm run lint         # Run ESLint
 ```
 
-### Environment Variables
+### Project Structure
 
-```bash
-# Supabase
-VITE_SUPABASE_URL=your_supabase_project_url
-VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
-
-# Optional: Stripe for payments
-VITE_STRIPE_PUBLISHABLE_KEY=your_stripe_key
-
-# App Configuration
-VITE_APP_NAME=Shawarma Joint
-VITE_APP_URL=http://localhost:5173
+```
+src/
+├── components/       # Reusable UI components
+├── pages/           # Route components
+├── contexts/        # React contexts (Auth, Cart)
+├── lib/            # Supabase client and utilities
+├── assets/         # Static assets
+└── styles/         # CSS files
 ```
 
 ## 🎨 Customization
 
 ### Branding
-- Logo: Replace `public/shawarma-joint-logo.jpg`
-- Colors: Update CSS custom properties in `src/index.css`
-- Business info: Edit `src/config/businessConfig.js`
+- Update colors in CSS custom properties
+- Replace logo in `src/assets/`
+- Modify business information in components
 
 ### Menu
-- Add/edit menu items in Supabase dashboard
-- Categories and items are managed through the database
-- Images can be stored in Supabase Storage
+- Add/edit items in Supabase dashboard
+- Update categories and descriptions
+- Upload new food images
+
+### Features
+- Add payment processing with Stripe
+- Implement real-time notifications
+- Add admin dashboard for order management
+
+## 🔒 Security
+
+- **Authentication**: Handled by Supabase Auth
+- **Database**: Protected with Row Level Security (RLS)
+- **API Keys**: Anon key is safe for browser exposure
+- **HTTPS**: Enforced by Vercel
+
+## 📊 Performance
+
+- **Bundle Size**: Optimized with Vite
+- **Images**: Lazy loading and optimization
+- **Caching**: Browser and CDN caching
+- **Real-time**: Efficient WebSocket connections
 
 ## 🤝 Contributing
 
 1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+2. Create a feature branch
+3. Make your changes
+4. Test thoroughly
+5. Submit a pull request
 
-## 📝 License
+## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 🙏 Acknowledgments
+## 🙋‍♂️ Support
 
-- **Real Customer Reviews** from Google Reviews
-- **DiceBear Personas** for avatar generation
-- **Supabase** for amazing backend services
-- **Vercel** for seamless deployment
-- **React Community** for excellent documentation
+- **Documentation**: Check the deployment guides
+- **Issues**: Create a GitHub issue
+- **Discussions**: Use GitHub Discussions
 
-## 📞 Support
+## 🌟 Roadmap
 
-- **Issues**: [GitHub Issues](https://github.com/your-username/shawarma-joint-app/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/your-username/shawarma-joint-app/discussions)
-- **Email**: your-email@example.com
+- [ ] Stripe payment integration
+- [ ] Admin dashboard
+- [ ] Mobile app (React Native)
+- [ ] Multi-location support
+- [ ] Loyalty program
+- [ ] Push notifications
 
 ---
 
-**Made with ❤️ for Shawarma Joint** - Serving the best Mediterranean food in Champaign-Urbana!
+**Built with ❤️ for the Mediterranean food community**
+
+*Ready to serve delicious shawarma and kebabs online!* 🥙✨

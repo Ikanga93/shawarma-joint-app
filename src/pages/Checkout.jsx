@@ -2,12 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useCustomerAuth } from '../contexts/CustomerAuthContext'
 import { useCart } from '../context/CartContext'
-import { loadStripe } from '@stripe/stripe-js'
-import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js'
-import ApiService from '../services/ApiService'
-
-const stripePublicKey = import.meta.env.VITE_STRIPE_PUBLIC_KEY || 'pk_test_placeholder'
-const stripePromise = stripePublicKey ? loadStripe(stripePublicKey) : null
+import { supabase } from '../lib/supabase'
 
 const CheckoutForm = () => {
   const { user } = useCustomerAuth()
@@ -17,19 +12,54 @@ const CheckoutForm = () => {
     email: user?.email || '',
     phone: user?.phone || ''
   })
+  const [pickupTime, setPickupTime] = useState('')
+  const [specialInstructions, setSpecialInstructions] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const stripe = useStripe()
-  const elements = useElements()
   const navigate = useNavigate()
 
-  const total = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0)
+  const total = cartItems.reduce((sum, item) => {
+    // Calculate item total including option prices
+    let itemTotal = item.price * item.quantity
+    
+    // Add option prices if they exist
+    if (item.selectedOptions) {
+      Object.values(item.selectedOptions).forEach(option => {
+        if (Array.isArray(option)) {
+          // Multi-select options
+          option.forEach(optionId => {
+            // Find the option price (this would need to be stored with the option)
+            // For now, we'll assume options don't add cost
+          })
+        }
+      })
+    }
+    
+    return sum + itemTotal
+  }, 0)
 
   useEffect(() => {
     if (cartItems.length === 0) {
       navigate('/menu')
     }
   }, [cartItems, navigate])
+
+  // Generate pickup time options (next 2 hours in 15-minute intervals)
+  const generatePickupTimes = () => {
+    const times = []
+    const now = new Date()
+    const start = new Date(now.getTime() + 30 * 60000) // Start 30 minutes from now
+    
+    for (let i = 0; i < 8; i++) { // 8 slots = 2 hours
+      const time = new Date(start.getTime() + i * 15 * 60000)
+      times.push({
+        value: time.toISOString(),
+        label: time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      })
+    }
+    
+    return times
+  }
 
   const handleInputChange = (e) => {
     const { name, value } = e.target
@@ -42,7 +72,8 @@ const CheckoutForm = () => {
   const handleSubmit = async (e) => {
     e.preventDefault()
     
-    if (!stripe || !elements) {
+    if (!user) {
+      setError('You must be logged in to place an order.')
       return
     }
 
@@ -50,47 +81,52 @@ const CheckoutForm = () => {
     setError('')
 
     try {
-      // Create payment intent
-      const { clientSecret } = await ApiService.createPaymentIntent({
-        amount: Math.round(total * 100), // Convert to cents
-        currency: 'usd',
-        customerInfo,
-        items: cartItems
-      })
-
-      // Confirm payment
-      const { error: stripeError, paymentIntent } = await stripe.confirmCardPayment(clientSecret, {
-        payment_method: {
-          card: elements.getElement(CardElement),
-          billing_details: {
-            name: customerInfo.name,
-            email: customerInfo.email,
-            phone: customerInfo.phone
-          }
-        }
-      })
-
-      if (stripeError) {
-        setError(stripeError.message)
-      } else if (paymentIntent.status === 'succeeded') {
-        // Create order
-        const orderData = {
+      // Create order in Supabase
+      const { data: orderData, error: orderError } = await supabase
+        .from('orders')
+        .insert({
+          user_id: user.id,
           customer_name: customerInfo.name,
           customer_email: customerInfo.email,
           customer_phone: customerInfo.phone,
-          items: cartItems,
-          total: total,
-          payment_intent_id: paymentIntent.id,
-          status: 'pending'
-        }
+          total_amount: total,
+          status: 'pending',
+          pickup_time: pickupTime || null,
+          special_instructions: specialInstructions || null
+        })
+        .select()
+        .single()
 
-        const order = await ApiService.createOrder(orderData)
-        clearCart()
-        navigate(`/order-confirmation/${order.id}`)
+      if (orderError) {
+        throw orderError
       }
+
+      // Create order items
+      const orderItems = cartItems.map(item => ({
+        order_id: orderData.id,
+        menu_item_id: item.id,
+        item_name: item.name,
+        price: item.price,
+        quantity: item.quantity,
+        emoji: item.emoji || '🍽️',
+        selected_options: item.selectedOptions ? JSON.stringify(item.selectedOptions) : null
+      }))
+
+      const { error: itemsError } = await supabase
+        .from('order_items')
+        .insert(orderItems)
+
+      if (itemsError) {
+        throw itemsError
+      }
+
+      // Clear cart and redirect to success page
+      clearCart()
+      navigate(`/order-confirmation/${orderData.id}`)
+      
     } catch (error) {
-      console.error('Payment error:', error)
-      setError('Payment failed. Please try again.')
+      console.error('Order creation error:', error)
+      setError('Failed to create order. Please try again.')
     } finally {
       setLoading(false)
     }
@@ -246,24 +282,51 @@ const CheckoutForm = () => {
                 fontWeight: '600',
                 color: '#1f2937',
                 marginBottom: '1rem'
-              }}>Payment Information</h3>
-              <div style={{
-                padding: '0.75rem',
-                border: '1px solid #d1d5db',
-                borderRadius: '6px',
-                background: 'white'
-              }}>
-                <CardElement
-                  options={{
-                    style: {
-                      base: {
-                        fontSize: '16px',
-                        color: '#424770',
-                        '::placeholder': {
-                          color: '#aab7c4',
-                        },
-                      },
-                    },
+              }}>Pickup Information</h3>
+              <div style={{ marginBottom: '1rem' }}>
+                <label style={{
+                  display: 'block',
+                  fontWeight: '500',
+                  color: '#374151',
+                  marginBottom: '0.5rem'
+                }}>Pickup Time</label>
+                <select
+                  id="pickupTime"
+                  name="pickupTime"
+                  value={pickupTime}
+                  onChange={(e) => setPickupTime(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '6px',
+                    fontSize: '1rem'
+                  }}
+                >
+                  <option value="">Select a pickup time</option>
+                  {generatePickupTimes().map((time, index) => (
+                    <option key={index} value={time.value}>{time.label}</option>
+                  ))}
+                </select>
+              </div>
+              <div style={{ marginBottom: '1rem' }}>
+                <label style={{
+                  display: 'block',
+                  fontWeight: '500',
+                  color: '#374151',
+                  marginBottom: '0.5rem'
+                }}>Special Instructions</label>
+                <textarea
+                  id="specialInstructions"
+                  name="specialInstructions"
+                  value={specialInstructions}
+                  onChange={(e) => setSpecialInstructions(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '6px',
+                    fontSize: '1rem'
                   }}
                 />
               </div>
@@ -284,21 +347,21 @@ const CheckoutForm = () => {
 
             <button
               type="submit"
-              disabled={!stripe || loading}
+              disabled={!user || loading}
               style={{
                 width: '100%',
-                background: loading || !stripe ? '#9ca3af' : 'linear-gradient(135deg, #dc2626, #b91c1c)',
+                background: loading || !user ? '#9ca3af' : 'linear-gradient(135deg, #dc2626, #b91c1c)',
                 color: 'white',
                 padding: '1rem 2rem',
                 border: 'none',
                 borderRadius: '8px',
                 fontSize: '1.125rem',
                 fontWeight: '600',
-                cursor: loading || !stripe ? 'not-allowed' : 'pointer',
+                cursor: loading || !user ? 'not-allowed' : 'pointer',
                 transition: 'all 0.3s ease'
               }}
             >
-              {loading ? 'Processing...' : `Pay $${total.toFixed(2)}`}
+              {loading ? 'Processing...' : 'Place Order'}
             </button>
           </form>
         </div>
@@ -309,9 +372,7 @@ const CheckoutForm = () => {
 
 const Checkout = () => {
   return (
-    <Elements stripe={stripePromise}>
-      <CheckoutForm />
-    </Elements>
+    <CheckoutForm />
   )
 }
 

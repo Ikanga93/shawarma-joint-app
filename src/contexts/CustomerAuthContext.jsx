@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react'
-import { API_BASE_URL } from '../config/api'
+import { supabase, signUp, signIn, signOut, getCurrentUser } from '../lib/supabase'
 
 const CustomerAuthContext = createContext(null)
 
@@ -17,44 +17,78 @@ export const CustomerAuthProvider = ({ children }) => {
   const [error, setError] = useState(null)
 
   useEffect(() => {
-    // Check for stored customer tokens on mount
-    const accessToken = localStorage.getItem('customerAccessToken')
-    const refreshToken = localStorage.getItem('customerRefreshToken')
+    // Check for existing session on mount
+    checkUser()
 
-    if (accessToken) {
-      fetchUser(accessToken)
-    } else {
-      setLoading(false)
-    }
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        console.log('Auth state changed:', event, session?.user?.email)
+        
+        if (session?.user) {
+          // Get user profile from our users table
+          try {
+            const { data: userProfile, error } = await supabase
+              .from('users')
+              .select('*')
+              .eq('id', session.user.id)
+              .single()
+
+            if (error) {
+              console.error('Error fetching user profile:', error)
+              setUser(null)
+            } else {
+              setUser({
+                id: userProfile.id,
+                email: userProfile.email,
+                firstName: userProfile.first_name,
+                lastName: userProfile.last_name,
+                phone: userProfile.phone,
+                role: userProfile.role
+              })
+            }
+          } catch (error) {
+            console.error('Error in auth state change:', error)
+            setUser(null)
+          }
+        } else {
+          setUser(null)
+        }
+        setLoading(false)
+      }
+    )
+
+    return () => subscription.unsubscribe()
   }, [])
 
-  const fetchUser = async (token) => {
+  const checkUser = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/auth/me`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
+      const currentUser = await getCurrentUser()
+      if (currentUser) {
+        // Get user profile from our users table
+        const { data: userProfile, error } = await supabase
+          .from('users')
+          .select('*')
+          .eq('id', currentUser.id)
+          .single()
+
+        if (error) {
+          console.error('Error fetching user profile:', error)
+          setUser(null)
+        } else {
+          setUser({
+            id: userProfile.id,
+            email: userProfile.email,
+            firstName: userProfile.first_name,
+            lastName: userProfile.last_name,
+            phone: userProfile.phone,
+            role: userProfile.role
+          })
         }
-      })
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch user')
-      }
-
-      const userData = await response.json()
-      
-      // Only set user if they are a customer
-      if (userData.role === 'customer') {
-        setUser(userData)
-      } else {
-        // If not a customer, clear tokens
-        localStorage.removeItem('customerAccessToken')
-        localStorage.removeItem('customerRefreshToken')
       }
     } catch (error) {
-      console.error('Error fetching customer user:', error)
-      // If token is invalid, clear storage
-      localStorage.removeItem('customerAccessToken')
-      localStorage.removeItem('customerRefreshToken')
+      console.error('Error checking user:', error)
+      setUser(null)
     } finally {
       setLoading(false)
     }
@@ -63,135 +97,69 @@ export const CustomerAuthProvider = ({ children }) => {
   const register = async (userData) => {
     try {
       setError(null)
+      setLoading(true)
       
-      // Ensure role is customer
-      const customerData = {
-        ...userData,
-        role: 'customer'
-      }
-
-      const response = await fetch(`${API_BASE_URL}/api/auth/register`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(customerData)
+      const { email, password, firstName, lastName, phone } = userData
+      
+      // Sign up with Supabase Auth
+      const authData = await signUp(email, password, {
+        first_name: firstName,
+        last_name: lastName,
+        phone: phone
       })
 
-      const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Registration failed')
-      }
-
-      // Verify the registered user is a customer
-      if (data.user.role !== 'customer') {
-        throw new Error('Invalid registration - not a customer account')
-      }
-
-      // Store customer tokens
-      localStorage.setItem('customerAccessToken', data.accessToken)
-      localStorage.setItem('customerRefreshToken', data.refreshToken)
-      setUser(data.user)
-
-      return data
+      // The trigger function in our schema will automatically create the user profile
+      // in the users table, so we don't need to manually insert it here
+      
+      return authData
     } catch (error) {
       setError(error.message)
       throw error
+    } finally {
+      setLoading(false)
     }
   }
 
   const login = async (credentials) => {
     try {
       setError(null)
-      const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(credentials)
-      })
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Login failed')
-      }
-
-      // Verify the logged in user is a customer
-      if (data.user.role !== 'customer') {
-        throw new Error('Access denied. Customer credentials required.')
-      }
-
-      // Store customer tokens
-      localStorage.setItem('customerAccessToken', data.accessToken)
-      localStorage.setItem('customerRefreshToken', data.refreshToken)
-      setUser(data.user)
-
-      return data
+      setLoading(true)
+      
+      const { email, password } = credentials
+      
+      // Sign in with Supabase Auth
+      const authData = await signIn(email, password)
+      
+      return authData
     } catch (error) {
       setError(error.message)
       throw error
+    } finally {
+      setLoading(false)
     }
   }
 
   const logout = async () => {
     try {
-      const refreshToken = localStorage.getItem('customerRefreshToken')
-      if (refreshToken) {
-        await fetch(`${API_BASE_URL}/api/auth/logout`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('customerAccessToken')}`
-          },
-          body: JSON.stringify({ refreshToken })
-        })
-      }
+      setError(null)
+      await signOut()
+      setUser(null)
     } catch (error) {
-      console.error('Customer logout error:', error)
-    } finally {
-      // Clear customer storage and state regardless of API call success
-      localStorage.removeItem('customerAccessToken')
-      localStorage.removeItem('customerRefreshToken')
+      setError(error.message)
+      console.error('Logout error:', error)
+      // Clear user state even if logout fails
       setUser(null)
     }
   }
 
+  // Supabase handles token refresh automatically, so we don't need this function
+  // But keeping it for compatibility with existing code
   const refreshAccessToken = async () => {
     try {
-      const refreshToken = localStorage.getItem('customerRefreshToken')
-      if (!refreshToken) {
-        throw new Error('No refresh token available')
-      }
-
-      const response = await fetch(`${API_BASE_URL}/api/auth/refresh`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ refreshToken })
-      })
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Token refresh failed')
-      }
-
-      // Verify refreshed user is still a customer
-      if (data.user.role !== 'customer') {
-        throw new Error('Invalid user role after refresh')
-      }
-
-      localStorage.setItem('customerAccessToken', data.accessToken)
-      setUser(data.user)
-
-      return data.accessToken
+      const currentUser = await getCurrentUser()
+      return currentUser?.access_token
     } catch (error) {
-      console.error('Customer token refresh error:', error)
-      // If refresh fails, logout
-      logout()
+      console.error('Token refresh error:', error)
       throw error
     }
   }
@@ -203,7 +171,8 @@ export const CustomerAuthProvider = ({ children }) => {
     register,
     login,
     logout,
-    refreshAccessToken
+    refreshAccessToken,
+    setError
   }
 
   return (
