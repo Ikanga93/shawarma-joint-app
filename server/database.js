@@ -49,24 +49,23 @@ if (hasPostgresUrl) {
     ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
   })
   
-  // Test the connection
-  pool.connect((err, client, release) => {
-    if (err) {
-      console.error('❌ PostgreSQL connection failed:', err.message)
-      console.error('❌ Falling back to SQLite...')
-      
-      // Fallback to SQLite if PostgreSQL fails
-      const dbPath = path.join(__dirname, 'orders.db')
-      db = new sqlite3.Database(dbPath)
-      isPostgreSQL = false
-      console.log('⚠️ Using SQLite as fallback database')
-    } else {
-      console.log('✅ PostgreSQL connected successfully')
-      release()
-      db = pool
-      isPostgreSQL = true
-    }
-  })
+  // Test the connection and set up database
+  try {
+    const client = await pool.connect()
+    console.log('✅ PostgreSQL connected successfully')
+    client.release()
+    db = pool
+    isPostgreSQL = true
+  } catch (err) {
+    console.error('❌ PostgreSQL connection failed:', err.message)
+    console.error('❌ Falling back to SQLite...')
+    
+    // Fallback to SQLite if PostgreSQL fails
+    const dbPath = path.join(__dirname, 'orders.db')
+    db = new sqlite3.Database(dbPath)
+    isPostgreSQL = false
+    console.log('⚠️ Using SQLite as fallback database')
+  }
   
 } else {
   // Development: Use SQLite for local development
@@ -188,9 +187,11 @@ export const initializeDatabase = async () => {
   try {
     if (isPostgreSQL) {
       // PostgreSQL table creation (convert SQLite to PostgreSQL syntax)
+      console.log('🔧 Initializing PostgreSQL tables...')
       await initializePostgreSQLTables()
     } else {
       // SQLite table creation (keep existing structure)
+      console.log('🔧 Initializing SQLite tables...')
       await initializeSQLiteTables()
     }
     
@@ -206,6 +207,7 @@ export const initializeDatabase = async () => {
     console.log('✅ Database tables initialized successfully')
   } catch (error) {
     console.error('❌ Error initializing database:', error)
+    throw error // Re-throw to see the full error
   }
 }
 
@@ -518,7 +520,7 @@ const initializeSQLiteTables = () => {
 }
 
 const initializePostgreSQLTables = async () => {
-  // Users table
+  // Users table (must be first)
   await query(`CREATE TABLE IF NOT EXISTS users (
     id VARCHAR(255) PRIMARY KEY,
     email VARCHAR(255) UNIQUE,
@@ -527,6 +529,20 @@ const initializePostgreSQLTables = async () => {
     role VARCHAR(50) NOT NULL CHECK(role IN ('admin', 'customer')),
     first_name VARCHAR(255),
     last_name VARCHAR(255),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  )`)
+
+  // Locations table (must be before admin_profiles due to foreign key)
+  await query(`CREATE TABLE IF NOT EXISTS locations (
+    id VARCHAR(255) PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    type VARCHAR(50) DEFAULT 'mobile',
+    description TEXT,
+    current_location VARCHAR(255),
+    schedule TEXT,
+    phone VARCHAR(20),
+    status VARCHAR(50) DEFAULT 'active',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
   )`)
@@ -648,7 +664,7 @@ const initializePostgreSQLTables = async () => {
     FOREIGN KEY (user_id) REFERENCES users (id)
   )`)
 
-  // Admin profiles table
+  // Admin profiles table (now after locations table)
   await query(`CREATE TABLE IF NOT EXISTS admin_profiles (
     id SERIAL PRIMARY KEY,
     user_id VARCHAR(255) UNIQUE NOT NULL,
@@ -687,20 +703,6 @@ const initializePostgreSQLTables = async () => {
     FOREIGN KEY (order_id) REFERENCES orders (id),
     FOREIGN KEY (changed_by) REFERENCES users (id),
     FOREIGN KEY (location_id) REFERENCES locations (id)
-  )`)
-
-  // Locations table
-  await query(`CREATE TABLE IF NOT EXISTS locations (
-    id VARCHAR(255) PRIMARY KEY,
-    name VARCHAR(255) NOT NULL,
-    type VARCHAR(50) DEFAULT 'mobile',
-    description TEXT,
-    current_location VARCHAR(255),
-    schedule TEXT,
-    phone VARCHAR(20),
-    status VARCHAR(50) DEFAULT 'active',
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
   )`)
 
   // Live locations table - for real-time food truck locations

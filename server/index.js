@@ -1868,12 +1868,52 @@ app.post('/api/migrate-data', async (req, res) => {
     await migrateSQLiteToPostgreSQL()
     res.json({ 
       success: true, 
-      message: 'Data migration from SQLite to PostgreSQL completed successfully' 
+      message: 'Data migration from SQLite to PostgreSQL completed successfully!' 
     })
   } catch (error) {
-    console.error('Data migration error:', error)
+    console.error('❌ Data migration error:', error)
     res.status(500).json({ 
       error: 'Data migration failed', 
+      details: error.message 
+    })
+  }
+})
+
+// Fix admin profiles endpoint
+app.post('/api/fix-admin-profiles', async (req, res) => {
+  try {
+    console.log('🔧 Fixing admin profiles...')
+    
+    // Get all admin users without profiles
+    const adminUsers = await queryAll('SELECT * FROM users WHERE role = ?', ['admin'])
+    console.log(`Found ${adminUsers.length} admin users`)
+    
+    let profilesCreated = 0
+    
+    for (const user of adminUsers) {
+      // Check if profile already exists
+      const existingProfile = await queryOne('SELECT * FROM admin_profiles WHERE user_id = ?', [user.id])
+      
+      if (!existingProfile) {
+        // Create admin profile
+        await query('INSERT INTO admin_profiles (user_id) VALUES (?)', [user.id])
+        profilesCreated++
+        console.log(`✅ Created admin profile for ${user.email}`)
+      } else {
+        console.log(`✅ Admin profile already exists for ${user.email}`)
+      }
+    }
+    
+    res.json({ 
+      success: true, 
+      message: `Admin profiles fixed! Created ${profilesCreated} new profiles.`,
+      totalAdminUsers: adminUsers.length,
+      profilesCreated
+    })
+  } catch (error) {
+    console.error('❌ Fix admin profiles error:', error)
+    res.status(500).json({ 
+      error: 'Failed to fix admin profiles', 
       details: error.message 
     })
   }
