@@ -28,12 +28,30 @@ const Menu = () => {
       const now = Date.now()
       const cacheExpiry = 5 * 60 * 1000 // 5 minutes
       
+      // If we have valid cache, load it first for faster display
       if (cachedItems && cacheTimestamp && (now - parseInt(cacheTimestamp)) < cacheExpiry) {
         console.log('Loading menu items from cache')
-        const data = JSON.parse(cachedItems)
-        setMenuItems(data.filter(item => item.available))
-        setLoading(false)
-        return
+        try {
+          const cachedData = JSON.parse(cachedItems)
+          setMenuItems(cachedData.filter(item => item.available))
+          setLoading(false)
+          
+          // Still fetch fresh data in the background to get images
+          console.log('Fetching fresh data for images in background')
+          const freshData = await ApiService.getMenuItems()
+          
+          // Merge cached data with fresh images
+          const mergedData = cachedData.map(cachedItem => {
+            const freshItem = freshData.find(fresh => fresh.id === cachedItem.id)
+            return freshItem ? { ...cachedItem, image_url: freshItem.image_url } : cachedItem
+          })
+          
+          setMenuItems(mergedData.filter(item => item.available))
+          return
+        } catch (cacheError) {
+          console.error('Cache parsing failed, fetching fresh data:', cacheError)
+          // Continue to fetch fresh data
+        }
       }
       
       console.log('Fetching menu items from API')
