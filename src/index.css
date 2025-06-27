@@ -137,7 +137,7 @@ body {
   box-shadow: 0 8px 25px rgba(255, 215, 0, 0.4);
 }
 
-/* Why Choose Mo's Burritos Section - Mobile First */
+/* Why Choose Mo's Burritos Section - Mobile First with Vertical Sliding */
 .why-choose-us {
   background: linear-gradient(135deg, #F3E5F5 0%, #E8F5E8 50%, #FFF3E0 100%);
   position: relative;
@@ -161,11 +161,66 @@ body {
   z-index: 2;
 }
 
-.features-grid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 24px;
-  margin-bottom: 40px;
+.features-container {
+  max-width: 100%;
+  margin: 0 auto;
+  overflow: hidden;
+  position: relative;
+  height: 500px; /* Fixed height for mobile */
+}
+
+.features-scroll {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  overflow-y: auto;
+  height: 100%;
+  padding: 16px 8px 24px 8px;
+  scroll-snap-type: y mandatory;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: var(--primary-red) #f1f1f1;
+  animation: verticalSlide 20s linear infinite;
+}
+
+.features-scroll:hover {
+  animation-play-state: paused;
+}
+
+@keyframes verticalSlide {
+  0% {
+    transform: translateY(0);
+  }
+  25% {
+    transform: translateY(-25%);
+  }
+  50% {
+    transform: translateY(-50%);
+  }
+  75% {
+    transform: translateY(-25%);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+
+.features-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.features-scroll::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 3px;
+}
+
+.features-scroll::-webkit-scrollbar-thumb {
+  background: #1B5E20;
+  border-radius: 6px;
+}
+
+.features-scroll::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(45deg, #1B5E20, #2E7D32);
 }
 
 .feature-item {
@@ -176,12 +231,18 @@ body {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
   transition: all 0.3s ease;
   border: 2px solid transparent;
+  min-height: 200px;
+  flex-shrink: 0;
+  scroll-snap-align: start;
+  margin-bottom: 8px;
 }
 
 .feature-item:hover {
-  transform: translateY(-4px);
+  transform: translateX(8px) scale(1.02);
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
   border-color: var(--warm-yellow);
+  z-index: 10;
+  position: relative;
 }
 
 .feature-icon {
@@ -367,208 +428,219 @@ body {
 /* Tablet Styles (768px and up) */
 @media (min-width: 768px) {
   .container {
-    padding: 0 24px;
+    max-width: 720px;
+    padding: 0 20px;
   }
-  
+
   .section {
     padding: 80px 0;
   }
-  
+
   .section-title {
-    font-size: 2.25rem;
-    margin-bottom: 20px;
+    font-size: 2.5rem;
   }
 
   .section-subtitle {
-    font-size: 1.1rem;
+    font-size: 1.2rem;
     margin-bottom: 50px;
-    padding: 0;
   }
-  
+
   .btn {
-    padding: 16px 32px;
+    padding: 14px 32px;
     font-size: 1.1rem;
-    min-height: 52px;
   }
-  
+
   .card {
     padding: 32px;
   }
-  
+
   .why-choose-us {
     padding: 80px 0;
   }
-  
-  .features-grid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 32px;
-    margin-bottom: 50px;
+
+  .features-container {
+    height: 400px; /* Adjusted for tablet */
+    max-width: 600px;
   }
   
+  .features-scroll {
+    padding: 20px 12px 28px 12px;
+  }
+
   .feature-item {
-    padding: 32px 28px;
+    padding: 28px 24px;
+    min-height: 180px;
   }
-  
+
   .feature-icon {
     font-size: 3rem;
-    margin-bottom: 20px;
+    margin-bottom: 18px;
   }
-  
+
   .feature-item h3 {
     font-size: 1.3rem;
     margin-bottom: 15px;
   }
   
+  .feature-item p {
+    font-size: 1rem;
+    line-height: 1.7;
+  }
+
   /* Testimonials Tablet Styles */
   .testimonials {
     padding: 80px 0;
   }
-  
+
   .testimonials .section-title {
-    font-size: 2.25rem;
+    font-size: 2.5rem;
     margin-bottom: 20px;
   }
-  
+
   .testimonials .section-subtitle {
-    font-size: 1.1rem;
+    font-size: 1.2rem;
     margin-bottom: 50px;
   }
-  
+
   .reviews-container {
-    max-width: 1000px;
+    max-width: 100%;
   }
-  
+
   .reviews-scroll {
     gap: 24px;
-    padding: 20px 0 30px 0;
+    padding: 20px 0 28px 0;
   }
-  
+
   .review-card {
-    min-width: 320px;
-    max-width: 380px;
-    padding: 28px;
+    min-width: 350px;
+    max-width: 400px;
+    padding: 24px;
   }
-  
+
   .reviewer-avatar {
     width: 48px;
     height: 48px;
     font-size: 1.2rem;
   }
-  
+
   .reviewer-info strong {
-    font-size: 1.05rem;
+    font-size: 1.1rem;
   }
-  
+
   .reviewer-info span {
     font-size: 0.9rem;
   }
-  
+
   .review-card p {
     font-size: 1rem;
-    line-height: 1.7;
+    line-height: 1.6;
   }
-  
+
   .testimonial-section h3 {
     font-size: 1.8rem;
-    margin-bottom: 30px;
+    margin-bottom: 24px;
   }
 }
 
 /* Desktop Styles (1024px and up) */
 @media (min-width: 1024px) {
   .container {
-    padding: 0 32px;
+    max-width: 960px;
   }
-  
+
   .section {
     padding: 100px 0;
   }
-  
+
   .section-title {
-    font-size: 2.5rem;
-    margin-bottom: 24px;
+    font-size: 3rem;
   }
 
   .section-subtitle {
-    font-size: 1.2rem;
+    font-size: 1.3rem;
     margin-bottom: 60px;
   }
-  
+
   .why-choose-us {
     padding: 100px 0;
   }
-  
-  .features-grid {
-    grid-template-columns: repeat(3, 1fr);
-    gap: 40px;
-    margin-bottom: 60px;
+
+  .features-container {
+    height: 350px; /* Adjusted for desktop */
+    max-width: 800px;
   }
   
+  .features-scroll {
+    padding: 24px 16px 32px 16px;
+  }
+
   .feature-item {
-    padding: 40px 32px;
+    padding: 32px 28px;
+    min-height: 160px;
   }
-  
+
   .feature-icon {
     font-size: 3.5rem;
-    margin-bottom: 24px;
+    margin-bottom: 20px;
   }
-  
+
   .feature-item h3 {
     font-size: 1.4rem;
-    margin-bottom: 18px;
+    margin-bottom: 16px;
   }
-  
+
   .feature-item p {
-    font-size: 1rem;
+    font-size: 1.05rem;
+    line-height: 1.7;
   }
-  
+
   /* Testimonials Desktop Styles */
   .testimonials {
     padding: 100px 0;
   }
-  
+
   .testimonials .section-title {
-    font-size: 2.5rem;
+    font-size: 3rem;
     margin-bottom: 24px;
   }
-  
+
   .testimonials .section-subtitle {
-    font-size: 1.2rem;
+    font-size: 1.3rem;
     margin-bottom: 60px;
   }
-  
+
   .reviews-container {
-    max-width: 1200px;
+    max-width: 100%;
   }
-  
+
   .reviews-scroll {
-    gap: 28px;
+    gap: 32px;
     padding: 24px 0 32px 0;
   }
-  
+
   .review-card {
-    min-width: 350px;
-    max-width: 400px;
-    padding: 32px;
+    min-width: 380px;
+    max-width: 420px;
+    padding: 28px;
   }
-  
+
   .reviewer-avatar {
     width: 52px;
     height: 52px;
     font-size: 1.3rem;
   }
-  
+
   .reviewer-info strong {
-    font-size: 1.1rem;
+    font-size: 1.2rem;
   }
-  
+
   .reviewer-info span {
     font-size: 0.95rem;
   }
-  
+
   .review-card p {
     font-size: 1.05rem;
-    line-height: 1.8;
+    line-height: 1.7;
   }
 }
 
@@ -577,13 +649,14 @@ body {
   .section {
     padding: 120px 0;
   }
-  
+
   .section-title {
-    font-size: 2.75rem;
+    font-size: 3.5rem;
   }
-  
-  .features-grid {
-    gap: 48px;
+
+  .features-container {
+    height: 300px; /* Adjusted for large desktop */
+    max-width: 1000px;
   }
 }
 

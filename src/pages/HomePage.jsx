@@ -125,29 +125,55 @@ const HomePage = () => {
             Experience the authentic taste of Mediterranean cuisine
           </p>
           
-          <div className="features-grid">
-            <div className="feature-item">
-              <div className="feature-icon">🏺</div>
-              <h3>Traditional Recipes</h3>
-              <p>Passed down through three generations of Mediterranean cooking tradition, our recipes are authentic and time-tested.</p>
-            </div>
-            
-            <div className="feature-item">
-              <div className="feature-icon">🌿</div>
-              <h3>Fresh Ingredients</h3>
-              <p>We source the freshest local ingredients and authentic Mediterranean spices to ensure every bite is perfect.</p>
-            </div>
-            
-            <div className="feature-item">
-              <div className="feature-icon">🏆</div>
-              <h3>Award Winning</h3>
-              <p>Recognized by the local community for outstanding food quality and exceptional customer service.</p>
-            </div>
-            
-            <div className="feature-item">
-              <div className="feature-icon">❤️</div>
-              <h3>Made with Love</h3>
-              <p>Every dish is prepared with passion and care, bringing you the true taste of Mediterranean with every meal.</p>
+          <div className="features-container">
+            <div className="features-scroll">
+              <div className="feature-item">
+                <div className="feature-icon">🏺</div>
+                <h3>Traditional Recipes</h3>
+                <p>Passed down through three generations of Mediterranean cooking tradition, our recipes are authentic and time-tested.</p>
+              </div>
+              
+              <div className="feature-item">
+                <div className="feature-icon">🌿</div>
+                <h3>Fresh Ingredients</h3>
+                <p>We source the freshest local ingredients and authentic Mediterranean spices to ensure every bite is perfect.</p>
+              </div>
+              
+              <div className="feature-item">
+                <div className="feature-icon">🏆</div>
+                <h3>Award Winning</h3>
+                <p>Recognized by the local community for outstanding food quality and exceptional customer service.</p>
+              </div>
+              
+              <div className="feature-item">
+                <div className="feature-icon">❤️</div>
+                <h3>Made with Love</h3>
+                <p>Every dish is prepared with passion and care, bringing you the true taste of Mediterranean with every meal.</p>
+              </div>
+
+              <div className="feature-item">
+                <div className="feature-icon">🚚</div>
+                <h3>Mobile & Convenient</h3>
+                <p>Find us around town with our food truck, bringing authentic Mediterranean flavors directly to your neighborhood.</p>
+              </div>
+              
+              <div className="feature-item">
+                <div className="feature-icon">⚡</div>
+                <h3>Fast Service</h3>
+                <p>Quick preparation without compromising quality. Perfect for your lunch break or quick dinner solution.</p>
+              </div>
+
+              <div className="feature-item">
+                <div className="feature-icon">🌟</div>
+                <h3>Customer Satisfaction</h3>
+                <p>Over 98% customer satisfaction rate with hundreds of five-star reviews from our loyal customers.</p>
+              </div>
+
+              <div className="feature-item">
+                <div className="feature-icon">💰</div>
+                <h3>Great Value</h3>
+                <p>Generous portions at affordable prices. Student discounts available - great food that fits your budget!</p>
+              </div>
             </div>
           </div>
         </div>
