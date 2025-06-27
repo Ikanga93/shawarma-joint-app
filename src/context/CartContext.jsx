@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
-import API_BASE_URL from '../config/api.js'
 
 const CartContext = createContext()
 

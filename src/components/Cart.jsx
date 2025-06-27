@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { X, Plus, Minus, ShoppingCart, CreditCard, MapPin, Truck, Building, LogIn, User } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
-import ApiService from '../services/ApiService'
-import API_BASE_URL from '../config/api.js'
+import { supabase } from '../lib/supabase'
 import { useCart } from '../context/CartContext'
 import { useCustomerAuth } from '../contexts/CustomerAuthContext'
 import './Cart.css'
@@ -91,18 +90,30 @@ const Cart = ({ isOpen, onClose }) => {
 
   const loadLocations = async () => {
     try {
-      const locationsData = await ApiService.getLocations()
-      // Only show active locations to customers
-      const activeLocations = locationsData.filter(location => location.status === 'active')
-      setLocations(activeLocations)
+      setLoading(true)
+      
+      // Fetch locations from Supabase
+      const { data: locationsData, error: locationsError } = await supabase
+        .from('locations')
+        .select('*')
+        .eq('is_active', true)
+        .order('name', { ascending: true })
+
+      if (locationsError) {
+        throw locationsError
+      }
+
+      setLocations(locationsData || [])
       
       // Auto-select first location if only one available
-      if (activeLocations.length === 1) {
-        setSelectedLocation(activeLocations[0].id)
+      if (locationsData && locationsData.length === 1) {
+        setSelectedLocation(locationsData[0].id)
       }
     } catch (error) {
       console.error('Error loading locations:', error)
       setError('Failed to load pickup locations')
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -162,34 +173,14 @@ const Cart = ({ isOpen, onClose }) => {
       return
     }
 
-    setIsProcessing(true)
-
-    try {
-      // Create order and get Stripe checkout URL
-      const orderData = {
-        customerName: orderCustomerInfo.name,
-        customerPhone: orderCustomerInfo.phone,
-        customerEmail: orderCustomerInfo.email,
-        items: cartItems,
-        subtotal,
-        tax,
-        total,
-        locationId: selectedLocation
-      }
-
-      const response = await ApiService.createOrder(orderData)
-      
-      // Store order ID for tracking
-      localStorage.setItem('currentOrderId', response.orderId)
-      
-      // Redirect to Stripe Checkout
-      window.location.href = response.checkoutUrl
-      
-    } catch (error) {
-      console.error('Error creating order:', error)
-      alert('Failed to create order. Please try again.')
-      setIsProcessing(false)
-    }
+    // Store checkout info and redirect to checkout page
+    sessionStorage.setItem('checkoutInfo', JSON.stringify({
+      customerInfo: orderCustomerInfo,
+      locationId: selectedLocation
+    }))
+    
+    onClose() // Close cart
+    navigate('/checkout') // Navigate to checkout page
   }
 
   if (!isOpen) return null
@@ -259,7 +250,7 @@ const Cart = ({ isOpen, onClose }) => {
                         <div className="cart-item-image">
                           {item.image_url ? (
                             <img 
-                              src={item.image_url.startsWith('data:') ? item.image_url : `${API_BASE_URL}${item.image_url}`} 
+                              src={item.image_url} 
                               alt={item.name}
                               className="cart-image"
                             />

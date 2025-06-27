@@ -282,7 +282,7 @@ const Menu = () => {
                   <div className="menu-item-image">
                     {item.image_url ? (
                       <img 
-                        src={item.image_url.startsWith('data:') ? item.image_url : `${API_BASE_URL}${item.image_url}`} 
+                        src={item.image_url} 
                         alt={item.name}
                         className="menu-image"
                       />
