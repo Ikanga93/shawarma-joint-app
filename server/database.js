@@ -32,7 +32,7 @@ let db
 let isPostgreSQL = false
 
 // TEMPORARY: Use SQLite for now until PostgreSQL is properly configured
-if (hasPostgresUrl) { // Re-enabled PostgreSQL
+if (false && hasPostgresUrl) { // Temporarily disabled PostgreSQL again
   // Production: Use PostgreSQL on Railway
   console.log('🚀 Production mode: Using PostgreSQL database')
   console.log('🔗 Database URL found:', railwayDatabaseUrl ? 'Yes (hidden for security)' : 'No')
