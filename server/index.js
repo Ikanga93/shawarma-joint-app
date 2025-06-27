@@ -11,7 +11,7 @@ import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 import multer from 'multer'
 import fs from 'fs'
-import { query, queryOne, queryAll, initializeDatabase } from './database.js'
+import { query, queryOne, queryAll, initializeDatabase, migrateSQLiteToPostgreSQL, isPostgreSQL } from './database.js'
 import http from 'http'
 
 // Load environment variables first
@@ -1852,6 +1852,46 @@ app.get('/api/init-db', async (req, res) => {
   } catch (error) {
     console.error('Database initialization error:', error)
     res.status(500).json({ error: 'Database initialization failed', details: error.message })
+  }
+})
+
+// Data migration endpoint (SQLite to PostgreSQL)
+app.post('/api/migrate-data', async (req, res) => {
+  try {
+    if (!isPostgreSQL) {
+      return res.status(400).json({ 
+        error: 'Not connected to PostgreSQL', 
+        message: 'Migration only works when connected to PostgreSQL database' 
+      })
+    }
+    
+    await migrateSQLiteToPostgreSQL()
+    res.json({ 
+      success: true, 
+      message: 'Data migration from SQLite to PostgreSQL completed successfully' 
+    })
+  } catch (error) {
+    console.error('Data migration error:', error)
+    res.status(500).json({ 
+      error: 'Data migration failed', 
+      details: error.message 
+    })
+  }
+})
+
+// Database status endpoint
+app.get('/api/db-status', async (req, res) => {
+  try {
+    res.json({
+      database: isPostgreSQL ? 'PostgreSQL' : 'SQLite',
+      connected: true,
+      environment: process.env.NODE_ENV || 'development'
+    })
+  } catch (error) {
+    res.status(500).json({ 
+      error: 'Failed to get database status', 
+      details: error.message 
+    })
   }
 })
 

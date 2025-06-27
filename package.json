@@ -11,7 +11,11 @@
     "preview": "vite preview",
     "start": "node server/index.js",
     "start:railway": "npm run build && node server/index.js",
-    "debug:env": "node debug-env.js"
+    "debug:env": "node debug-env.js",
+    "postgres:help": "node scripts/setup-postgres.js --help",
+    "postgres:test": "node scripts/setup-postgres.js --test",
+    "postgres:migrate": "node scripts/setup-postgres.js --migrate",
+    "postgres:setup": "node scripts/setup-postgres.js --setup"
   },
   "dependencies": {
     "@stripe/react-stripe-js": "^3.7.0",

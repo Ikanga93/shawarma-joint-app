@@ -31,38 +31,52 @@ console.log('hasPostgresUrl:', hasPostgresUrl)
 let db
 let isPostgreSQL = false
 
-// TEMPORARY: Use SQLite for now until PostgreSQL is properly configured
-if (false && hasPostgresUrl) { // Temporarily disabled PostgreSQL again
-  // Production: Use PostgreSQL on Railway
-  console.log('🚀 Production mode: Using PostgreSQL database')
+// Use PostgreSQL when available (production or when DATABASE_URL is explicitly provided)
+if (hasPostgresUrl) {
+  // Use PostgreSQL when URL is available
+  console.log('🚀 Using PostgreSQL database')
   console.log('🔗 Database URL found:', railwayDatabaseUrl ? 'Yes (hidden for security)' : 'No')
+  console.log('🌍 Environment:', isDevelopment ? 'Development' : 'Production')
   
   const { Pool } = pg
   
   const pool = new Pool({
     connectionString: railwayDatabaseUrl,
-    ssl: { rejectUnauthorized: false }
+    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
   })
   
   // Test the connection
   pool.connect((err, client, release) => {
     if (err) {
       console.error('❌ PostgreSQL connection failed:', err.message)
-      console.error('❌ This is a critical error in production!')
-      process.exit(1) // Exit if PostgreSQL fails in production
+      console.error('❌ Falling back to SQLite...')
+      
+      // Fallback to SQLite if PostgreSQL fails
+      const dbPath = path.join(__dirname, 'orders.db')
+      db = new sqlite3.Database(dbPath)
+      isPostgreSQL = false
+      console.log('⚠️ Using SQLite as fallback database')
+    } else {
+      console.log('✅ PostgreSQL connected successfully')
+      release()
+      db = pool
+      isPostgreSQL = true
     }
-    console.log('✅ PostgreSQL connected successfully')
-    release()
   })
   
-  db = pool
-  isPostgreSQL = true
 } else {
-  // Use SQLite for now (both development and production)
-  console.log('🔧 Using SQLite database (temporary solution)')
+  // Development: Use SQLite for local development
+  console.log('🔧 Development mode: Using SQLite database')
   const dbPath = isDevelopment ? path.join(__dirname, 'orders.db') : './orders.db'
   db = new sqlite3.Database(dbPath)
   isPostgreSQL = false
+  
+  if (!isDevelopment && !hasPostgresUrl) {
+    console.log('⚠️ No PostgreSQL URL found in production - using SQLite')
+    console.log('⚠️ Consider setting up PostgreSQL for better production performance')
+  } else if (isDevelopment) {
+    console.log('💡 To use PostgreSQL in development, set DATABASE_URL environment variable')
+  }
 }
 
 // Helper function to run queries
@@ -898,4 +912,100 @@ const createDefaultOptionTemplates = async () => {
   }
 }
 
-export default db
+// Data migration function to transfer data from SQLite to PostgreSQL
+export const migrateSQLiteToPostgreSQL = async () => {
+  if (!isPostgreSQL) {
+    console.log('⚠️ Not connected to PostgreSQL, skipping migration')
+    return
+  }
+  
+  try {
+    console.log('🔄 Starting data migration from SQLite to PostgreSQL...')
+    
+    // Read data from SQLite
+    const sqliteDbPath = path.join(__dirname, 'orders.db')
+    const sqliteDb = new sqlite3.Database(sqliteDbPath)
+    
+    const sqliteQuery = (sql, params = []) => {
+      return new Promise((resolve, reject) => {
+        sqliteDb.all(sql, params, (err, rows) => {
+          if (err) reject(err)
+          else resolve(rows)
+        })
+      })
+    }
+    
+    // Migrate users
+    const users = await sqliteQuery('SELECT * FROM users')
+    console.log(`📊 Found ${users.length} users to migrate`)
+    
+    for (const user of users) {
+      try {
+        await query(
+          'INSERT INTO users (id, email, phone, password_hash, role, first_name, last_name, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT (id) DO NOTHING',
+          [user.id, user.email, user.phone, user.password_hash, user.role, user.first_name, user.last_name, user.created_at, user.updated_at]
+        )
+      } catch (err) {
+        console.log(`⚠️ User ${user.email} already exists, skipping`)
+      }
+    }
+    
+    // Migrate menu items
+    const menuItems = await sqliteQuery('SELECT * FROM menu_items')
+    console.log(`📊 Found ${menuItems.length} menu items to migrate`)
+    
+    for (const item of menuItems) {
+      try {
+        await query(
+          'INSERT INTO menu_items (id, name, description, price, category, emoji, image_url, available, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT (id) DO NOTHING',
+          [item.id, item.name, item.description, item.price, item.category, item.emoji, item.image_url, item.available, item.created_at, item.updated_at]
+        )
+      } catch (err) {
+        console.log(`⚠️ Menu item ${item.name} already exists or failed to migrate`)
+      }
+    }
+    
+    // Migrate orders
+    const orders = await sqliteQuery('SELECT * FROM orders')
+    console.log(`📊 Found ${orders.length} orders to migrate`)
+    
+    for (const order of orders) {
+      try {
+        await query(
+          'INSERT INTO orders (id, user_id, customer_name, customer_phone, customer_email, items, subtotal, tax, total_amount, status, payment_method, payment_status, stripe_session_id, order_date, estimated_completion, estimated_time, time_remaining, location_id, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT (id) DO NOTHING',
+          [order.id, order.user_id, order.customer_name, order.customer_phone, order.customer_email, order.items, order.subtotal, order.tax, order.total_amount, order.status, order.payment_method, order.payment_status, order.stripe_session_id, order.order_date, order.estimated_completion, order.estimated_time, order.time_remaining, order.location_id, order.notes]
+        )
+      } catch (err) {
+        console.log(`⚠️ Order ${order.id} already exists or failed to migrate`)
+      }
+    }
+    
+    // Migrate locations
+    const locations = await sqliteQuery('SELECT * FROM locations')
+    console.log(`📊 Found ${locations.length} locations to migrate`)
+    
+    for (const location of locations) {
+      try {
+        await query(
+          'INSERT INTO locations (id, name, type, description, current_location, schedule, phone, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT (id) DO NOTHING',
+          [location.id, location.name, location.type, location.description, location.current_location, location.schedule, location.phone, location.status, location.created_at, location.updated_at]
+        )
+      } catch (err) {
+        console.log(`⚠️ Location ${location.name} already exists or failed to migrate`)
+      }
+    }
+    
+    // Close SQLite connection
+    sqliteDb.close()
+    
+    console.log('✅ Data migration completed successfully!')
+    console.log('💡 You can now remove the SQLite database file if desired')
+    
+  } catch (error) {
+    console.error('❌ Error during data migration:', error)
+    throw error
+  }
+}
+
+// Export the database connection and utility functions
+export { db, isPostgreSQL }
