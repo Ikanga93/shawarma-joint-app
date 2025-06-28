@@ -3608,6 +3608,27 @@ const DashboardPage = ({ onLogout }) => {
         onLogout={onLogout}
       />
       
+      {/* Marketing Bar */}
+      <div className="marketing-bar">
+        <div className="marketing-content">
+          <div className="marketing-text">
+            <span className="marketing-icon">📱</span>
+            <span className="marketing-message">
+              Boost your social media presence and grow your business!
+            </span>
+          </div>
+          <a 
+            href="https://login.buffer.com/login" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="marketing-button"
+          >
+            <span>Get Started with Buffer</span>
+            <span className="external-icon">↗</span>
+          </a>
+        </div>
+      </div>
+      
       {/* Location Selector for Multi-Location Users */}
       {currentUser && (
         <div className="dashboard-location-bar">

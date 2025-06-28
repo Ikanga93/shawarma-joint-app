@@ -3806,3 +3806,158 @@
 }
 
 /* Loading and Error States */
+.btn-remove-choice {
+  padding: 4px;
+}
+
+/* Marketing Bar Styles */
+.marketing-bar {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 12px 20px;
+  position: relative;
+  overflow: hidden;
+}
+
+.marketing-bar::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+  animation: shimmer 3s infinite;
+}
+
+@keyframes shimmer {
+  0% { left: -100%; }
+  100% { left: 100%; }
+}
+
+.marketing-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.marketing-text {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: white;
+  font-family: 'Fredoka', sans-serif;
+}
+
+.marketing-icon {
+  font-size: 1.5rem;
+  animation: bounce 2s infinite;
+}
+
+@keyframes bounce {
+  0%, 20%, 50%, 80%, 100% {
+    transform: translateY(0);
+  }
+  40% {
+    transform: translateY(-8px);
+  }
+  60% {
+    transform: translateY(-4px);
+  }
+}
+
+.marketing-message {
+  font-size: 1rem;
+  font-weight: 500;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.marketing-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background: rgba(255, 255, 255, 0.95);
+  color: #667eea;
+  text-decoration: none;
+  border-radius: 25px;
+  font-family: 'Fredoka', sans-serif;
+  font-weight: 600;
+  font-size: 0.95rem;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.marketing-button:hover {
+  background: white;
+  color: #5a67d8;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+}
+
+.marketing-button:active {
+  transform: translateY(0);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+}
+
+.external-icon {
+  font-size: 0.9rem;
+  transition: transform 0.3s ease;
+}
+
+.marketing-button:hover .external-icon {
+  transform: translate(2px, -2px);
+}
+
+/* Mobile Responsive Marketing Bar */
+@media (max-width: 768px) {
+  .marketing-bar {
+    padding: 10px 16px;
+  }
+  
+  .marketing-content {
+    flex-direction: column;
+    gap: 12px;
+    text-align: center;
+  }
+  
+  .marketing-text {
+    justify-content: center;
+  }
+  
+  .marketing-message {
+    font-size: 0.9rem;
+  }
+  
+  .marketing-button {
+    padding: 8px 16px;
+    font-size: 0.9rem;
+    min-width: 160px;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .marketing-bar {
+    padding: 8px 12px;
+  }
+  
+  .marketing-message {
+    font-size: 0.85rem;
+    line-height: 1.3;
+  }
+  
+  .marketing-button {
+    padding: 6px 14px;
+    font-size: 0.85rem;
+  }
+  
+  .marketing-icon {
+    font-size: 1.3rem;
+  }
+}
